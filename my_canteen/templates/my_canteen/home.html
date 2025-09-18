@@ -1,0 +1,17 @@
+{% extends "my_canteen/base.html" %}
+
+{% block content %}
+<h1>Welcome to UAP CanteenX 🍴</h1>
+<p>Our popular items:</p>
+
+<div class="card-grid">
+    {% for item in items %}
+    <div class="card">
+        <img src="{{ item.img }}" alt="{{ item.name }}">
+        <h3>{{ item.name }}</h3>
+        <p>Price: {{ item.price }} Tk</p>
+        <button>Add to Cart</button>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
