@@ -17,14 +17,27 @@
             <li><a href="/orders/">Orders</a></li>
             <li><a href="/about/">About</a></li>
             <li><a href="/contact/">Contact</a></li>
+            {% if user.is_authenticated %}
+                <li>
+                    <form action="/logout/" method="post" style="display:inline;">
+                        {% csrf_token %}
+                        <button type="submit" style="background:none;border:none;color:white;cursor:pointer;font-weight:bold;">
+                            Logout
+                        </button>
+                    </form>
+                </li>
+            {% else %}
+                <li><a href="/login/">Login</a></li>
+                <li><a href="/signup/">Signup</a></li>
+            {% endif %}
         </ul>
     </nav>
 
     <!-- Main Content -->
-    <div class="container">
+    <main class="container">
         {% block content %}
         {% endblock %}
-    </div>
+    </main>
 
     <!-- Footer -->
     <footer>
@@ -32,3 +45,5 @@
     </footer>
 </body>
 </html>
+
+<!-- <p>DEBUG: {{ user }}</p> -->
