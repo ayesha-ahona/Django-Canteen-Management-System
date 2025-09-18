@@ -1,7 +1,6 @@
 {% extends "my_canteen/base.html" %}
-
 {% block content %}
-<h1>Welcome to UAP CanteenX 🍴</h1>
+<h2>Welcome to UAP CanteenX 🍴</h2>
 <p>Our popular items:</p>
 
 <div class="card-grid">
@@ -10,7 +9,7 @@
         {% if item.image %}
             <img src="{{ item.image.url }}" alt="{{ item.name }}">
         {% else %}
-            <img src="https://via.placeholder.com/150" alt="{{ item.name }}">
+            <img src="https://via.placeholder.com/150" alt="No Image">
         {% endif %}
         <h3>{{ item.name }}</h3>
         <p>Price: {{ item.price }} Tk</p>
