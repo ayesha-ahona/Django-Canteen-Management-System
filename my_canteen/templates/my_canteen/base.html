@@ -17,11 +17,18 @@
             <li><a href="/orders/">Orders</a></li>
             <li><a href="/about/">About</a></li>
             <li><a href="/contact/">Contact</a></li>
+
             {% if user.is_authenticated %}
+                <li><a href="/dashboard/">Dashboard</a></li>
                 <li>
                     <form action="/logout/" method="post" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" style="background:none;border:none;color:white;cursor:pointer;font-weight:bold;">
+                        <button type="submit" 
+                                style="background:none;
+                                       border:none;
+                                       color:white;
+                                       font-weight:bold;
+                                       cursor:pointer;">
                             Logout
                         </button>
                     </form>
@@ -45,5 +52,3 @@
     </footer>
 </body>
 </html>
-
-<!-- <p>DEBUG: {{ user }}</p> -->
