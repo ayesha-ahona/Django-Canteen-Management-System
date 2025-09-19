@@ -1,21 +1,18 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h2>Vendor Dashboard 📦</h2>
-
 <div class="dashboard-container">
-    <div class="sidebar">
-        <h3>Menu</h3>
+    <h2 class="dashboard-title">🛒 Vendor Dashboard</h2>
+
+    <div class="dashboard-menu">
         <ul>
-            <li><a href="#">Supply List</a></li>
-            <li><a href="#">Add Stock</a></li>
-            <li><a href="{% url 'profile' %}">Profile</a></li>
-            <li><a href="{% url 'settings' %}">Settings</a></li>
-            <li><a href="{% url 'logout' %}">Logout</a></li>
+            <li><a href="#">Supply Items</a></li>
+            <li><a href="#">Profile</a></li>
         </ul>
     </div>
 
-    <div class="dashboard-content">
-        <p>Welcome {{ profile.user.username }}. Supply management features will be added here.</p>
+    <div class="orders-section">
+        <h3>📦 Vendor Supplies</h3>
+        <p>No supplies listed.</p>
     </div>
 </div>
 {% endblock %}
