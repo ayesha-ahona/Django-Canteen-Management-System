@@ -6,13 +6,12 @@ from django.contrib import messages
 from .models import MenuItem, UserProfile, Order
 from .forms import CustomSignupForm
 
-# ---------------- Home ----------------
+# Home
 def home(request):
     popular_items = MenuItem.objects.filter(is_popular=True, is_active=True)[:6]
     return render(request, 'my_canteen/home.html', {"popular_items": popular_items})
 
-
-# ---------------- Menu ----------------
+# Menu
 def menu_page(request):
     query = request.GET.get('q')
     min_price = request.GET.get('min_price')
@@ -21,9 +20,7 @@ def menu_page(request):
     items = MenuItem.objects.filter(is_active=True)
 
     if query:
-        items = items.filter(
-            Q(name__icontains=query) | Q(description__icontains=query)
-        )
+        items = items.filter(Q(name__icontains=query) | Q(description__icontains=query))
     if min_price:
         items = items.filter(price__gte=min_price)
     if max_price:
@@ -31,82 +28,70 @@ def menu_page(request):
 
     return render(request, 'my_canteen/menu.html', {'items': items})
 
-
-# ---------------- Orders ----------------
-@login_required
 def orders_page(request):
-    profile = UserProfile.objects.get(user=request.user)
-    orders = Order.objects.filter(user=request.user).order_by("-created_at")
-    return render(request, 'my_canteen/orders.html', {"orders": orders, "profile": profile})
+    return render(request, 'my_canteen/orders.html')
 
-
-# ---------------- Static Pages ----------------
 def about_page(request):
     return render(request, 'my_canteen/about.html')
 
 def contact_page(request):
     return render(request, 'my_canteen/contact.html')
 
-
-# ---------------- Signup ----------------
+# Signup
 def signup_page(request):
     if request.method == 'POST':
         form = CustomSignupForm(request.POST)
         if form.is_valid():
-            role = form.cleaned_data['role']
-
-            # ❌ Restrict new SuperAdmin or Admin signup
-            if role in ['superadmin', 'admin']:
-                messages.error(request, "SuperAdmin and Admin roles are reserved. Please select another role.")
-                return redirect('signup')
-
             user = form.save(commit=False)
             user.email = form.cleaned_data['email']
             user.save()
 
+            role = form.cleaned_data['role']
             phone = form.cleaned_data.get('phone')
 
+            # ✅ প্রথম user হলে superadmin
+            if User.objects.count() == 1:
+                role = 'superadmin'
+
             profile = user.userprofile
-            profile.role = role   # allowed roles only
+            profile.role = role
             profile.phone = phone
             profile.save()
 
-            messages.success(request, f"Account created successfully as {role.capitalize()}! Please login.")
+            messages.success(request, "Account created successfully! Please login.")
             return redirect('login')
     else:
         form = CustomSignupForm()
     return render(request, 'my_canteen/signup.html', {'form': form})
 
-
-# ---------------- Dashboard ----------------
+# Dashboard
 @login_required
 def dashboard(request):
     profile = UserProfile.objects.get(user=request.user)
+
     role = profile.role
 
-    # Orders by role
-    if role in ["superadmin", "admin"]:
+    if role == "superadmin":
+        orders = Order.objects.all().order_by('-created_at')
+    elif role == "admin":
         orders = Order.objects.all().order_by('-created_at')
     elif role == "staff":
         orders = Order.objects.filter(status="processing").order_by('-created_at')
     elif role == "vendor":
-        orders = []  # vendor future এ নিজের products দেখতে পারবে
+        orders = []
     else:  # student, faculty, guest
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
 
-    # Auto template choose
     template_name = f"my_canteen/dashboard/{role}.html"
     return render(request, template_name, {"profile": profile, "orders": orders})
 
-
-# ---------------- Profile ----------------
+# Profile
 @login_required
 def profile_page(request):
     profile = UserProfile.objects.get(user=request.user)
     return render(request, 'my_canteen/profile.html', {"profile": profile})
 
-
-# ---------------- Settings ----------------
+# Settings (update email + phone)
 @login_required
 def settings_page(request):
     profile = UserProfile.objects.get(user=request.user)
@@ -115,11 +100,9 @@ def settings_page(request):
         email = request.POST.get("email")
         phone = request.POST.get("phone")
 
-        # update email
         request.user.email = email
         request.user.save()
 
-        # update phone
         profile.phone = phone
         profile.save()
 
