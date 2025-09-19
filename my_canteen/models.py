@@ -31,6 +31,7 @@ class MenuItem(models.Model):
     stock = models.PositiveIntegerField(default=0)
     image = models.ImageField(upload_to='menu/', blank=True, null=True)  # ✅ image field
     category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True)
-
+    is_active = models.BooleanField(default=True)   # ✅ default True
+    
     def __str__(self):
         return self.name
