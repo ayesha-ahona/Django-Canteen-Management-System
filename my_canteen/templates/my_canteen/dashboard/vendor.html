@@ -1,18 +1,18 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
 <div class="dashboard-container">
-    <h2 class="dashboard-title">🛒 Vendor Dashboard</h2>
+    <h2 class="dashboard-title">👤 Guest Dashboard</h2>
 
     <div class="dashboard-menu">
         <ul>
-            <li><a href="#">Supply Items</a></li>
-            <li><a href="#">Profile</a></li>
+            <li><a href="/menu/">🍴 Browse Menu</a></li>
+            <li><a href="/login/">🔑 Login</a></li>
         </ul>
     </div>
 
     <div class="orders-section">
-        <h3>📦 Vendor Supplies</h3>
-        <p>No supplies listed.</p>
+        <h3>ℹ Guest Access</h3>
+        <p>Please login to place an order.</p>
     </div>
 </div>
 {% endblock %}

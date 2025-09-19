@@ -5,11 +5,11 @@
 
     <div class="dashboard-menu">
         <ul>
-            <li><a href="#">All Orders</a></li>
-            <li><a href="#">Profile</a></li>
-            <li><a href="#">Settings</a></li>
-            <li><a href="#">Manage Users</a></li>
-            <li><a href="#">Reports</a></li>
+            <li><a href="#">📦 All Orders</a></li>
+            <li><a href="#">👥 Manage Users</a></li>
+            <li><a href="#">🍴 Manage Menu</a></li>
+            <li><a href="#">⚙ Settings</a></li>
+            <li><a href="#">📊 Reports</a></li>
         </ul>
     </div>
 
@@ -18,11 +18,10 @@
         <table class="orders-table">
             <thead>
                 <tr>
-                    <th>User ID</th>
+                    <th>User</th>
                     <th>Date</th>
                     <th>Items</th>
                     <th>Total</th>
-                    <th>Address</th>
                     <th>Status</th>
                 </tr>
             </thead>
@@ -34,14 +33,11 @@
                         <td>{{ order.date }}</td>
                         <td>{{ order.items }}</td>
                         <td>{{ order.total }} Tk</td>
-                        <td>{{ order.address }}</td>
                         <td>{{ order.status }}</td>
                     </tr>
                     {% endfor %}
                 {% else %}
-                    <tr>
-                        <td colspan="6">No orders found.</td>
-                    </tr>
+                    <tr><td colspan="5">No orders found.</td></tr>
                 {% endif %}
             </tbody>
         </table>

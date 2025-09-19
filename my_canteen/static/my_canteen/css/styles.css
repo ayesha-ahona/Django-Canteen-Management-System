@@ -111,3 +111,38 @@ footer {
     padding: 15px;
     margin-top: 40px;
 }
+
+/* Dashboard Menu Styled as Cards */
+.dashboard-menu ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+}
+
+.dashboard-menu ul li {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 15px;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, background 0.3s;
+}
+
+.dashboard-menu ul li:hover {
+    transform: translateY(-5px);
+    background: #d32f2f;
+}
+
+.dashboard-menu ul li a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    display: block;
+}
+
+.dashboard-menu ul li:hover a {
+    color: #fff;
+}

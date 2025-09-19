@@ -3,17 +3,42 @@
 <div class="dashboard-container">
     <h2 class="dashboard-title">👨‍💼 Admin Dashboard</h2>
 
+    <!-- Menu -->
     <div class="dashboard-menu">
         <ul>
-            <li><a href="#">Orders</a></li>
-            <li><a href="#">Manage Menu</a></li>
-            <li><a href="#">Reports</a></li>
+            <li><a href="#">📦 Orders</a></li>
+            <li><a href="#">🍴 Manage Menu</a></li>
+            <li><a href="#">📊 Reports</a></li>
         </ul>
     </div>
 
+    <!-- Orders Section -->
     <div class="orders-section">
         <h3>📊 Orders Summary</h3>
-        <p>No data available yet.</p>
+        <table class="orders-table">
+            <thead>
+                <tr>
+                    <th>User</th>
+                    <th>Date</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if orders %}
+                    {% for order in orders %}
+                    <tr>
+                        <td>{{ order.user.username }}</td>
+                        <td>{{ order.date }}</td>
+                        <td>{{ order.total }} Tk</td>
+                        <td>{{ order.status }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="4">No data available yet.</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
     </div>
 </div>
 {% endblock %}
