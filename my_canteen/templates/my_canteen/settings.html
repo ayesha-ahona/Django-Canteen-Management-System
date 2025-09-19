@@ -1,16 +1,15 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h2>Settings ⚙️</h2>
-<div class="dashboard-content">
-    <form method="post">
-        {% csrf_token %}
-        <label>Email:</label><br>
-        <input type="email" name="email" value="{{ profile.user.email }}"><br><br>
+<h2>⚙️ Account Settings</h2>
 
-        <label>Phone:</label><br>
-        <input type="text" name="phone" value="{{ profile.phone }}"><br><br>
+<form method="post" class="settings-form">
+    {% csrf_token %}
+    <label>Email:</label>
+    <input type="email" name="email" value="{{ profile.user.email }}" required>
 
-        <button type="submit">Update</button>
-    </form>
-</div>
+    <label>Phone:</label>
+    <input type="text" name="phone" value="{{ profile.phone|default:'' }}" placeholder="Enter phone number">
+
+    <button type="submit" class="btn">💾 Save Changes</button>
+</form>
 {% endblock %}
