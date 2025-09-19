@@ -13,12 +13,10 @@ urlpatterns = [
     path('about/', views.about_page, name='about'),
     path('contact/', views.contact_page, name='contact'),
 
-    # Authentication
     path('signup/', views.signup_page, name='signup'),
     path('login/', auth_views.LoginView.as_view(template_name='my_canteen/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
 
-    # Dashboard
     path('dashboard/', views.dashboard, name='dashboard'),
 ]
 

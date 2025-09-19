@@ -1,81 +1,31 @@
-# from django.shortcuts import render, redirect
-# from django.contrib.auth.decorators import login_required
-# from django.contrib.auth.models import User
-# from .models import MenuItem, UserProfile
-# from .forms import CustomSignupForm   # ✅ custom signup form import
-
-# # ===========================
-# # Public Pages
-# # ===========================
-
-# def home(request):
-#     items = MenuItem.objects.all()
-#     return render(request, 'my_canteen/home.html', {"items": items})
-
-# def menu_page(request):
-#     return render(request, 'my_canteen/menu.html')
-
-# def orders_page(request):
-#     return render(request, 'my_canteen/orders.html')
-
-# def about_page(request):
-#     return render(request, 'my_canteen/about.html')
-
-# def contact_page(request):
-#     return render(request, 'my_canteen/contact.html')
-
-
-# # ===========================
-# # Signup Page
-# # ===========================
-
-# def signup_page(request):
-#     if request.method == 'POST':
-#         form = CustomSignupForm(request.POST)
-#         if form.is_valid():
-#             user = form.save(commit=False)
-#             user.save()
-
-#             # Get role & phone from form
-#             role = form.cleaned_data['role']
-#             phone = form.cleaned_data.get('phone')
-
-#             # ✅ Auto SuperAdmin if first user
-#             if User.objects.count() == 1:
-#                 role = 'superadmin'
-
-#             UserProfile.objects.create(user=user, role=role, phone=phone)
-#             return redirect('login')
-#     else:
-#         form = CustomSignupForm()
-
-#     return render(request, 'my_canteen/signup.html', {'form': form})
-
-
-# # ===========================
-# # Dashboard (Role-based)
-# # ===========================
-
-# @login_required
-# def dashboard(request):
-#     profile = UserProfile.objects.get(user=request.user)
-#     role = profile.role
-#     return render(request, f'my_canteen/dashboard/{role}.html')
-
-
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from .models import MenuItem, UserProfile
-from .forms import CustomSignupForm   # ✅ import custom signup form
+from django.db.models import Q
+from .models import MenuItem, UserProfile, Order
+from .forms import CustomSignupForm
 
-# Home (public)
+# Home page (popular items)
 def home(request):
-    items = MenuItem.objects.all()
-    return render(request, 'my_canteen/home.html', {"items": items})
+    popular_items = MenuItem.objects.filter(is_popular=True, is_active=True)[:6]
+    return render(request, 'my_canteen/home.html', {"popular_items": popular_items})
 
+# Menu page (search + filter)
 def menu_page(request):
-    return render(request, 'my_canteen/menu.html')
+    query = request.GET.get('q')
+    min_price = request.GET.get('min_price')
+    max_price = request.GET.get('max_price')
+
+    items = MenuItem.objects.filter(is_active=True)
+
+    if query:
+        items = items.filter(Q(name__icontains=query) | Q(description__icontains=query))
+    if min_price:
+        items = items.filter(price__gte=min_price)
+    if max_price:
+        items = items.filter(price__lte=max_price)
+
+    return render(request, 'my_canteen/menu.html', {'items': items})
 
 def orders_page(request):
     return render(request, 'my_canteen/orders.html')
@@ -93,25 +43,36 @@ def signup_page(request):
         if form.is_valid():
             user = form.save(commit=False)
             user.save()
-
-            # Get role & phone
             role = form.cleaned_data['role']
             phone = form.cleaned_data.get('phone')
-
-            # First user will be superadmin automatically
             if User.objects.count() == 1:
                 role = 'superadmin'
-
             UserProfile.objects.create(user=user, role=role, phone=phone)
             return redirect('login')
     else:
         form = CustomSignupForm()
-
     return render(request, 'my_canteen/signup.html', {'form': form})
 
-# Dashboard (role based)
+# Role Based Dashboard
 @login_required
 def dashboard(request):
-    profile = UserProfile.objects.get(user=request.user)
+    profile, created = UserProfile.objects.get_or_create(
+        user=request.user,
+        defaults={'role': 'guest'}
+    )
+
     role = profile.role
-    return render(request, f'my_canteen/dashboard/{role}.html')
+
+    if role == "superadmin":
+        orders = Order.objects.all().order_by('-created_at')
+    elif role == "admin":
+        orders = Order.objects.all().order_by('-created_at')
+    elif role == "staff":
+        orders = Order.objects.filter(status="processing").order_by('-created_at')
+    elif role == "vendor":
+        orders = []  # vendor-specific later
+    else:  # student, faculty, guest
+        orders = Order.objects.filter(user=request.user).order_by('-created_at')
+
+    template_name = f"my_canteen/dashboard/{role}.html"
+    return render(request, template_name, {"profile": profile, "orders": orders})

@@ -1,5 +1,28 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h1>Menu Page</h1>
-<p>Here we will show all menu items.</p>
+<h2>All Menu Items</h2>
+
+<form method="get" class="search-filter-form">
+    <input type="text" name="q" placeholder="Search food..." value="{{ request.GET.q }}">
+    <input type="number" name="min_price" placeholder="Min Price" value="{{ request.GET.min_price }}">
+    <input type="number" name="max_price" placeholder="Max Price" value="{{ request.GET.max_price }}">
+    <button type="submit">Search</button>
+</form>
+
+<div class="card-grid">
+    {% for item in items %}
+    <div class="card">
+        {% if item.image %}
+            <img src="{{ item.image.url }}" alt="{{ item.name }}">
+        {% else %}
+            <img src="https://via.placeholder.com/150" alt="No Image">
+        {% endif %}
+        <h3>{{ item.name }}</h3>
+        <p>{{ item.price }} Tk</p>
+        <button>Add to Cart</button>
+    </div>
+    {% empty %}
+        <p>No items found.</p>
+    {% endfor %}
+</div>
 {% endblock %}

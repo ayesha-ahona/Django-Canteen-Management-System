@@ -1,10 +1,10 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
 <h2>Welcome to UAP CanteenX 🍴</h2>
-<p>Our popular items:</p>
 
+<h3>🔥 Popular Items</h3>
 <div class="card-grid">
-    {% for item in items %}
+    {% for item in popular_items %}
     <div class="card">
         {% if item.image %}
             <img src="{{ item.image.url }}" alt="{{ item.name }}">
@@ -13,8 +13,9 @@
         {% endif %}
         <h3>{{ item.name }}</h3>
         <p>Price: {{ item.price }} Tk</p>
-        <button>Add to Cart</button>
     </div>
+    {% empty %}
+        <p>No popular items found.</p>
     {% endfor %}
 </div>
 {% endblock %}

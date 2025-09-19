@@ -1,5 +1,37 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h2>Student Dashboard</h2>
-<p>Browse menu and place your orders.</p>
+<h2>Student Dashboard 🎓</h2>
+
+<div class="dashboard-container">
+    <div class="sidebar">
+        <h3>Menu</h3>
+        <ul>
+            <li><a href="{% url 'dashboard' %}">My Orders</a></li>
+            <li><a href="#">Profile</a></li>
+            <li><a href="#">Settings</a></li>
+            <li><a href="{% url 'logout' %}">Logout</a></li>
+        </ul>
+    </div>
+
+    <div class="dashboard-content">
+        <h3>Your Orders</h3>
+        <table class="dashboard-table">
+            <tr>
+                <th>ID</th><th>Date</th><th>Items</th><th>Total</th><th>Address</th><th>Status</th>
+            </tr>
+            {% for order in orders %}
+            <tr>
+                <td>{{ order.id }}</td>
+                <td>{{ order.created_at|date:"Y-m-d H:i" }}</td>
+                <td>{% for item in order.items.all %}{{ item.name }} ({{ item.price }} Tk)<br>{% endfor %}</td>
+                <td>{{ order.total_price }} Tk</td>
+                <td>{{ order.address }}</td>
+                <td>{{ order.status }}</td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6">No orders yet.</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</div>
 {% endblock %}
