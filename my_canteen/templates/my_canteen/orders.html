@@ -1,39 +1,31 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h2>📦 My Orders</h2>
+<h2>Your Orders</h2>
 
 {% if orders %}
-<table class="orders-table">
-    <thead>
-        <tr>
-            <th>Order ID</th>
-            <th>Date</th>
-            <th>Items</th>
-            <th>Total</th>
-            <th>Address</th>
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for order in orders %}
-        <tr>
-            <td>#{{ order.id }}</td>
-            <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
-            <td>
-                <ul>
-                    {% for item in order.items.all %}
-                    <li>{{ item.name }} (x{{ item.quantity }})</li>
-                    {% endfor %}
-                </ul>
-            </td>
-            <td>৳ {{ order.total_amount }}</td>
-            <td>{{ order.address }}</td>
-            <td><span class="status {{ order.status }}">{{ order.status|title }}</span></td>
-        </tr>
-        {% endfor %}
-    </tbody>
+<table border="1" cellpadding="10" cellspacing="0" style="width:100%;text-align:center;">
+    <tr>
+        <th>Order ID</th>
+        <th>Items</th>
+        <th>Total Price</th>
+        <th>Status</th>
+        <th>Date</th>
+    </tr>
+    {% for order in orders %}
+    <tr>
+        <td>{{ order.id }}</td>
+        <td>
+            {% for item in order.items.all %}
+                {{ item.name }} ({{ item.price }} Tk)<br>
+            {% endfor %}
+        </td>
+        <td>{{ order.total_price }} Tk</td>
+        <td>{{ order.get_status_display }}</td>
+        <td>{{ order.created_at }}</td>
+    </tr>
+    {% endfor %}
 </table>
 {% else %}
-<p>No orders found.</p>
+<p>You have no orders yet.</p>
 {% endif %}
 {% endblock %}

@@ -19,13 +19,12 @@
         {% endif %}
         <h3>{{ item.name }}</h3>
         <p>{{ item.price }} Tk</p>
-
         {% if item.stock > 0 %}
             <a href="{% url 'add_to_cart' item.id %}">
-                <button type="button">Add to Cart</button>
+                <button>Add to Cart</button>
             </a>
         {% else %}
-            <button disabled>Out of Stock</button>
+            <p style="color:red;font-weight:bold;">Out of Stock</p>
         {% endif %}
     </div>
     {% empty %}

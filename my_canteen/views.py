@@ -31,62 +31,66 @@ def menu_page(request):
     return render(request, 'my_canteen/menu.html', {'items': items})
 
 
-# ---------------- Cart System ----------------
+# ---------------- Cart ----------------
+@login_required
 def add_to_cart(request, item_id):
-    item = get_object_or_404(MenuItem, id=item_id)
     cart = request.session.get("cart", {})
-
-    if str(item_id) in cart:
-        cart[str(item_id)]["quantity"] += 1
-    else:
-        cart[str(item_id)] = {
-            "name": item.name,
-            "price": float(item.price),
-            "quantity": 1
-        }
-
+    cart[str(item_id)] = cart.get(str(item_id), 0) + 1
     request.session["cart"] = cart
-    messages.success(request, f"{item.name} added to cart!")
+    messages.success(request, "Item added to cart!")
     return redirect("menu")
 
 
+@login_required
 def view_cart(request):
     cart = request.session.get("cart", {})
-    total = sum(item["price"] * item["quantity"] for item in cart.values())
-    return render(request, "my_canteen/cart.html", {"cart": cart, "total": total})
+    items = []
+    total = 0
+
+    for item_id, qty in cart.items():
+        try:
+            item = MenuItem.objects.get(id=item_id, is_active=True)
+            subtotal = item.price * qty
+            items.append({"item": item, "qty": qty, "subtotal": subtotal})
+            total += subtotal
+        except MenuItem.DoesNotExist:
+            continue
+
+    return render(request, "my_canteen/cart.html", {"items": items, "total": total})
 
 
 @login_required
 def checkout(request):
     cart = request.session.get("cart", {})
-
     if not cart:
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
 
-    total_price = sum(item["price"] * item["quantity"] for item in cart.values())
-
+    total = 0
     order = Order.objects.create(
         user=request.user,
-        total_price=total_price,
-        address="Sample Address"
+        total_price=0,
+        address="Default Address"
     )
 
-    for item_id, item_data in cart.items():
-        menu_item = MenuItem.objects.get(id=int(item_id))
-
-        if menu_item.stock < item_data["quantity"]:
-            messages.error(request, f"{menu_item.name} does not have enough stock!")
+    for item_id, qty in cart.items():
+        item = MenuItem.objects.get(id=item_id)
+        if item.stock < qty:
+            messages.error(request, f"{item.name} is out of stock!")
+            order.delete()
             return redirect("cart")
 
-        menu_item.stock -= item_data["quantity"]
-        menu_item.save()
-        order.items.add(menu_item)
+        item.stock -= qty
+        item.save()
 
+        order.items.add(item)
+        total += item.price * qty
+
+    order.total_price = total
     order.save()
-    request.session["cart"] = {}
 
-    messages.success(request, "✅ Order placed successfully!")
+    request.session["cart"] = {}
+    messages.success(request, f"Order placed successfully! Total: {total} Tk")
     return redirect("orders")
 
 
@@ -96,6 +100,41 @@ def orders_page(request):
     profile = UserProfile.objects.get(user=request.user)
     orders = Order.objects.filter(user=request.user).order_by("-created_at")
     return render(request, 'my_canteen/orders.html', {"orders": orders, "profile": profile})
+
+
+# ---------------- Static Pages ----------------
+def about_page(request):
+    return render(request, 'my_canteen/about.html')
+
+def contact_page(request):
+    return render(request, 'my_canteen/contact.html')
+
+
+# ---------------- Signup ----------------
+def signup_page(request):
+    if request.method == 'POST':
+        form = CustomSignupForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.email = form.cleaned_data['email']
+            user.save()
+
+            role = form.cleaned_data['role']
+            phone = form.cleaned_data.get('phone')
+
+            if User.objects.count() == 1:
+                role = 'superadmin'
+
+            profile = user.userprofile
+            profile.role = role
+            profile.phone = phone
+            profile.save()
+
+            messages.success(request, "Account created successfully! Please login.")
+            return redirect('login')
+    else:
+        form = CustomSignupForm()
+    return render(request, 'my_canteen/signup.html', {'form': form})
 
 
 # ---------------- Dashboard ----------------
@@ -147,38 +186,3 @@ def settings_page(request):
         return redirect("settings")
 
     return render(request, 'my_canteen/settings.html', {"profile": profile})
-
-
-# ---------------- Signup ----------------
-def signup_page(request):
-    if request.method == 'POST':
-        form = CustomSignupForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.email = form.cleaned_data['email']
-            user.save()
-
-            role = form.cleaned_data['role']
-            phone = form.cleaned_data.get('phone')
-
-            if User.objects.count() == 1:
-                role = 'superadmin'
-
-            profile = user.userprofile
-            profile.role = role
-            profile.phone = phone
-            profile.save()
-
-            messages.success(request, "Account created successfully! Please login.")
-            return redirect('login')
-    else:
-        form = CustomSignupForm()
-    return render(request, 'my_canteen/signup.html', {'form': form})
-
-
-# ---------------- Static Pages ----------------
-def about_page(request):
-    return render(request, 'my_canteen/about.html')
-
-def contact_page(request):
-    return render(request, 'my_canteen/contact.html')
