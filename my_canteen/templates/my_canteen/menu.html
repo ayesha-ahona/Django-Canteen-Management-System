@@ -1,7 +1,8 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h2>All Menu Items</h2>
+<h2>🍔 All Menu Items</h2>
 
+<!-- Search + Filter -->
 <form method="get" class="search-filter-form">
     <input type="text" name="q" placeholder="Search food..." value="{{ request.GET.q }}">
     <input type="number" name="min_price" placeholder="Min Price" value="{{ request.GET.min_price }}">
@@ -9,17 +10,30 @@
     <button type="submit">Search</button>
 </form>
 
+<!-- Card Grid -->
 <div class="card-grid">
     {% for item in items %}
     <div class="card">
+        <!-- Image -->
         {% if item.image %}
             <img src="{{ item.image.url }}" alt="{{ item.name }}">
         {% else %}
             <img src="https://via.placeholder.com/150" alt="No Image">
         {% endif %}
+
+        <!-- Food Info -->
         <h3>{{ item.name }}</h3>
-        <p>{{ item.price }} Tk</p>
-        <button>Add to Cart</button>
+        <p><strong>{{ item.price }} Tk</strong></p>
+
+        <!-- Stock Check -->
+        {% if item.stock > 0 %}
+            <form method="post" action="{% url 'place_order' item.id %}">
+                {% csrf_token %}
+                <button type="submit">Order Now</button>
+            </form>
+        {% else %}
+            <p style="color:red; font-weight:bold;">Out of Stock</p>
+        {% endif %}
     </div>
     {% empty %}
         <p>No items found.</p>
