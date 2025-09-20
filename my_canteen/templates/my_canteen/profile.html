@@ -1,0 +1,13 @@
+{% extends "my_canteen/base.html" %}
+{% block content %}
+<h2>👤 My Profile</h2>
+
+<div class="profile-card">
+    <p><strong>Username:</strong> {{ profile.user.username }}</p>
+    <p><strong>Email:</strong> {{ profile.user.email }}</p>
+    <p><strong>Phone:</strong> {{ profile.phone|default:"Not set" }}</p>
+    <p><strong>Role:</strong> {{ profile.get_role_display }}</p>
+</div>
+
+<a href="/settings/" class="btn">⚙️ Edit Profile</a>
+{% endblock %}

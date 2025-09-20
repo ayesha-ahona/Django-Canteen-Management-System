@@ -1,5 +1,39 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h1>Orders Page</h1>
-<p>Here we will show your past orders.</p>
+<h2>📦 My Orders</h2>
+
+{% if orders %}
+<table class="orders-table">
+    <thead>
+        <tr>
+            <th>Order ID</th>
+            <th>Date</th>
+            <th>Items</th>
+            <th>Total</th>
+            <th>Address</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for order in orders %}
+        <tr>
+            <td>#{{ order.id }}</td>
+            <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
+            <td>
+                <ul>
+                    {% for item in order.items.all %}
+                    <li>{{ item.name }} (x{{ item.quantity }})</li>
+                    {% endfor %}
+                </ul>
+            </td>
+            <td>৳ {{ order.total_amount }}</td>
+            <td>{{ order.address }}</td>
+            <td><span class="status {{ order.status }}">{{ order.status|title }}</span></td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p>No orders found.</p>
+{% endif %}
 {% endblock %}

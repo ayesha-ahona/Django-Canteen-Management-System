@@ -18,9 +18,11 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.username} ({self.role})"
 
+
 class Category(models.Model):
     name = models.CharField(max_length=50)
     def __str__(self): return self.name
+
 
 class MenuItem(models.Model):
     name = models.CharField(max_length=100)
@@ -33,6 +35,7 @@ class MenuItem(models.Model):
     is_popular = models.BooleanField(default=False)
 
     def __str__(self): return self.name
+
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -50,3 +53,20 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Order {self.id} by {self.user.username}"
+
+
+# ✅ Signals: Ensure UserProfile always created
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    if created:
+        UserProfile.objects.create(user=instance, role='guest')
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    try:
+        instance.userprofile.save()
+    except UserProfile.DoesNotExist:
+        UserProfile.objects.create(user=instance, role='guest')
