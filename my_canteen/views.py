@@ -22,9 +22,7 @@ def menu_page(request):
     items = MenuItem.objects.filter(is_active=True)
 
     if query:
-        items = items.filter(
-            Q(name__icontains=query) | Q(description__icontains=query)
-        )
+        items = items.filter(Q(name__icontains=query) | Q(description__icontains=query))
     if min_price:
         items = items.filter(price__gte=min_price)
     if max_price:
@@ -33,31 +31,63 @@ def menu_page(request):
     return render(request, 'my_canteen/menu.html', {'items': items})
 
 
-# ---------------- Place Order ----------------
-@login_required
-def place_order(request, item_id):
+# ---------------- Cart System ----------------
+def add_to_cart(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id)
+    cart = request.session.get("cart", {})
 
-    # stock check
-    if item.stock <= 0:
-        messages.error(request, f"{item.name} is out of stock!")
-        return redirect('menu')
+    if str(item_id) in cart:
+        cart[str(item_id)]["quantity"] += 1
+    else:
+        cart[str(item_id)] = {
+            "name": item.name,
+            "price": float(item.price),
+            "quantity": 1
+        }
 
-    # stock কমানো
-    item.stock -= 1
-    item.save()
+    request.session["cart"] = cart
+    messages.success(request, f"{item.name} added to cart!")
+    return redirect("menu")
 
-    # নতুন order তৈরি
+
+def view_cart(request):
+    cart = request.session.get("cart", {})
+    total = sum(item["price"] * item["quantity"] for item in cart.values())
+    return render(request, "my_canteen/cart.html", {"cart": cart, "total": total})
+
+
+@login_required
+def checkout(request):
+    cart = request.session.get("cart", {})
+
+    if not cart:
+        messages.error(request, "Your cart is empty!")
+        return redirect("menu")
+
+    total_price = sum(item["price"] * item["quantity"] for item in cart.values())
+
     order = Order.objects.create(
         user=request.user,
-        total_price=item.price,
-        address="Sample Address"  # Future এ address form থেকে আসবে
+        total_price=total_price,
+        address="Sample Address"
     )
-    order.items.add(item)
-    order.save()
 
-    messages.success(request, f"You have ordered {item.name} successfully!")
-    return redirect('orders')
+    for item_id, item_data in cart.items():
+        menu_item = MenuItem.objects.get(id=int(item_id))
+
+        if menu_item.stock < item_data["quantity"]:
+            messages.error(request, f"{menu_item.name} does not have enough stock!")
+            return redirect("cart")
+
+        menu_item.stock -= item_data["quantity"]
+        menu_item.save()
+        order.items.add(menu_item)
+
+    order.save()
+    request.session["cart"] = {}
+
+    messages.success(request, "✅ Order placed successfully!")
+    return redirect("orders")
 
 
 # ---------------- Orders ----------------
@@ -76,14 +106,14 @@ def dashboard(request):
 
     if role in ["superadmin", "admin"]:
         orders = Order.objects.all().order_by('-created_at')
-        items = MenuItem.objects.all()  # stock panel
+        items = MenuItem.objects.all()
     elif role == "staff":
         orders = Order.objects.filter(status="processing").order_by('-created_at')
         items = None
     elif role == "vendor":
         orders = []
         items = None
-    else:  # student, faculty, guest
+    else:
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
         items = None
 
@@ -131,7 +161,6 @@ def signup_page(request):
             role = form.cleaned_data['role']
             phone = form.cleaned_data.get('phone')
 
-            # ✅ প্রথম user হলে superadmin
             if User.objects.count() == 1:
                 role = 'superadmin'
 

@@ -2,12 +2,18 @@
 {% block content %}
 <h2>👤 My Profile</h2>
 
-<div class="profile-card">
+<div style="max-width:600px; margin:auto; background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
     <p><strong>Username:</strong> {{ profile.user.username }}</p>
     <p><strong>Email:</strong> {{ profile.user.email }}</p>
-    <p><strong>Phone:</strong> {{ profile.phone|default:"Not set" }}</p>
-    <p><strong>Role:</strong> {{ profile.get_role_display }}</p>
+    <p><strong>Role:</strong> {{ profile.role|title }}</p>
+    <p><strong>Phone:</strong> {{ profile.phone }}</p>
 </div>
 
-<a href="/settings/" class="btn">⚙️ Edit Profile</a>
+<div style="margin-top:20px; text-align:center;">
+    <a href="{% url 'settings' %}">
+        <button style="padding:10px 20px; background:#d32f2f; color:white; border:none; border-radius:5px; cursor:pointer;">
+            Edit Profile
+        </button>
+    </a>
+</div>
 {% endblock %}
