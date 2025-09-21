@@ -60,6 +60,33 @@ def view_cart(request):
 
 
 @login_required
+def remove_from_cart(request, item_id):
+    cart = request.session.get("cart", {})
+    if str(item_id) in cart:
+        del cart[str(item_id)]
+        request.session["cart"] = cart
+        messages.success(request, "Item removed from cart!")
+    return redirect("cart")
+
+
+@login_required
+def update_cart(request, item_id):
+    if request.method == "POST":
+        qty = int(request.POST.get("qty", 1))
+        cart = request.session.get("cart", {})
+
+        if qty > 0:
+            cart[str(item_id)] = qty
+        else:
+            cart.pop(str(item_id), None)
+
+        request.session["cart"] = cart
+        messages.success(request, "Cart updated successfully!")
+
+    return redirect("cart")
+
+
+@login_required
 def checkout(request):
     cart = request.session.get("cart", {})
     if not cart:

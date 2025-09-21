@@ -3,27 +3,36 @@
 <h2>Your Cart</h2>
 
 {% if items %}
-<table border="1" cellpadding="10" cellspacing="0" style="width:100%;text-align:center;">
+<table border="1" cellpadding="10" cellspacing="0">
     <tr>
-        <th>Item</th>
-        <th>Qty</th>
+        <th>Food</th>
         <th>Price</th>
+        <th>Quantity</th>
         <th>Subtotal</th>
+        <th>Actions</th>
     </tr>
-    {% for row in items %}
+    {% for entry in items %}
     <tr>
-        <td>{{ row.item.name }}</td>
-        <td>{{ row.qty }}</td>
-        <td>{{ row.item.price }} Tk</td>
-        <td>{{ row.subtotal }} Tk</td>
+        <td>{{ entry.item.name }}</td>
+        <td>{{ entry.item.price }} Tk</td>
+        <td>
+            <form method="post" action="{% url 'update_cart' entry.item.id %}">
+                {% csrf_token %}
+                <input type="number" name="qty" value="{{ entry.qty }}" min="1" style="width:50px;">
+                <button type="submit">Update</button>
+            </form>
+        </td>
+        <td>{{ entry.subtotal }} Tk</td>
+        <td>
+            <a href="{% url 'remove_from_cart' entry.item.id %}" 
+               style="color:red; font-weight:bold;">Remove</a>
+        </td>
     </tr>
     {% endfor %}
 </table>
 
 <h3>Total: {{ total }} Tk</h3>
-<a href="{% url 'checkout' %}">
-    <button style="margin-top:10px;">Checkout</button>
-</a>
+<a href="{% url 'checkout' %}"><button>Proceed to Checkout</button></a>
 {% else %}
 <p>Your cart is empty.</p>
 {% endif %}

@@ -3,7 +3,7 @@
 <h2>Your Orders</h2>
 
 {% if orders %}
-<table border="1" cellpadding="10" cellspacing="0" style="width:100%;text-align:center;">
+<table border="1" cellpadding="10" cellspacing="0">
     <tr>
         <th>Order ID</th>
         <th>Items</th>
@@ -20,7 +20,7 @@
             {% endfor %}
         </td>
         <td>{{ order.total_price }} Tk</td>
-        <td>{{ order.get_status_display }}</td>
+        <td>{{ order.status }}</td>
         <td>{{ order.created_at }}</td>
     </tr>
     {% endfor %}
