@@ -1,21 +1,40 @@
 {% extends "my_canteen/base.html" %}
+{% load static %}
 {% block content %}
-<h2>Welcome to UAP CanteenX 🍴</h2>
 
-<h3>🔥 Popular Items</h3>
-<div class="card-grid">
-    {% for item in popular_items %}
-    <div class="card">
-        {% if item.image %}
-            <img src="{{ item.image.url }}" alt="{{ item.name }}">
-        {% else %}
-            <img src="https://via.placeholder.com/150" alt="No Image">
-        {% endif %}
-        <h3>{{ item.name }}</h3>
-        <p>Price: {{ item.price }} Tk</p>
+<!-- Hero Section -->
+<section class="hero">
+    <div class="hero-content">
+        <h1>🍴 Welcome to UAP CanteenX</h1>
+        <p>
+            Enjoy delicious meals, freshly prepared at our university canteen.  
+            Quality food, quick service, and a friendly environment – all in one place!
+        </p>
+        <img src="{% static 'my_canteen/images/OIP.webp' %}" 
+             alt="Canteen Image" class="hero-img">
     </div>
-    {% empty %}
+</section>
+
+<!-- Popular Items Section -->
+<section class="popular">
+    <h2>🔥 Popular Items</h2>
+    {% if popular_items %}
+        <div class="card-grid">
+            {% for item in popular_items %}
+                <div class="card">
+                    {% if item.image %}
+                        <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                    {% else %}
+                        <img src="https://via.placeholder.com/200" alt="No Image">
+                    {% endif %}
+                    <h3>{{ item.name }}</h3>
+                    <p>{{ item.price }} Tk</p>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
         <p>No popular items found.</p>
-    {% endfor %}
-</div>
+    {% endif %}
+</section>
+
 {% endblock %}

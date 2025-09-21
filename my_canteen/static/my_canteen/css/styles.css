@@ -17,7 +17,7 @@ body {
 }
 
 .navbar .logo {
-    font-size: 18px;
+    font-size: 20px;
     font-weight: bold;
 }
 
@@ -45,6 +45,51 @@ body {
     padding: 20px;
     max-width: 1200px;
     margin: auto;
+}
+
+/* Hero Section */
+.hero {
+    text-align: center;
+    padding: 60px 20px;
+    background: linear-gradient(135deg, #ffe6e6, #fff);
+    border-radius: 12px;
+    margin: 20px auto 40px;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+}
+
+.hero h1 {
+    font-size: 36px;
+    font-weight: bold;
+    color: #d32f2f;
+    margin-bottom: 15px;
+}
+
+.hero p {
+    font-size: 18px;
+    color: #444;
+    max-width: 700px;
+    margin: 0 auto 20px;
+    line-height: 1.6;
+}
+
+.hero-img {
+    max-width: 600px;
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
+
+/* Popular Items Section */
+.popular {
+    margin-top: 60px;
+    text-align: center;
+}
+
+.popular h2 {
+    font-size: 28px;
+    margin-bottom: 20px;
+    color: #d32f2f;
 }
 
 /* Card Grid */
@@ -80,6 +125,7 @@ body {
 .card h3 {
     margin: 10px 0 5px;
     font-size: 18px;
+    color: #333;
 }
 
 .card p {
@@ -87,7 +133,7 @@ body {
     color: #666;
 }
 
-/* Button */
+/* Card Button */
 .card button {
     margin-top: 10px;
     padding: 8px 14px;
@@ -101,50 +147,6 @@ body {
 
 .card button:hover {
     background: #b71c1c;
-}
-
-/* Footer */
-footer {
-    background: #333;
-    color: #fff;
-    text-align: center;
-    padding: 15px;
-    margin-top: 40px;
-}
-
-/* Dashboard Menu Styled as Cards */
-.dashboard-menu ul {
-    list-style: none;
-    padding: 0;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 15px;
-}
-
-.dashboard-menu ul li {
-    background: #fff;
-    border: 1px solid #ddd;
-    padding: 15px;
-    text-align: center;
-    border-radius: 8px;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-    transition: transform 0.2s, background 0.3s;
-}
-
-.dashboard-menu ul li:hover {
-    transform: translateY(-5px);
-    background: #d32f2f;
-}
-
-.dashboard-menu ul li a {
-    text-decoration: none;
-    color: #333;
-    font-weight: bold;
-    display: block;
-}
-
-.dashboard-menu ul li:hover a {
-    color: #fff;
 }
 
 /* Orders Table */
@@ -225,4 +227,48 @@ footer {
 
 .settings-form .btn:hover {
     background: #b71c1c;
+}
+
+/* Dashboard Menu Styled as Cards */
+.dashboard-menu ul {
+    list-style: none;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 15px;
+}
+
+.dashboard-menu ul li {
+    background: #fff;
+    border: 1px solid #ddd;
+    padding: 15px;
+    text-align: center;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s, background 0.3s;
+}
+
+.dashboard-menu ul li:hover {
+    transform: translateY(-5px);
+    background: #d32f2f;
+}
+
+.dashboard-menu ul li a {
+    text-decoration: none;
+    color: #333;
+    font-weight: bold;
+    display: block;
+}
+
+.dashboard-menu ul li:hover a {
+    color: #fff;
+}
+
+/* Footer */
+footer {
+    background: #333;
+    color: #fff;
+    text-align: center;
+    padding: 20px;
+    margin-top: 60px;
 }
