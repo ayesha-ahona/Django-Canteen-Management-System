@@ -1,12 +1,13 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-
 <h2>🛠️ Admin Dashboard</h2>
 
 <div class="dashboard-tabs">
-    <button class="tab-btn" onclick="showTab('orders')">📦 All Orders</button>
+    <button class="tab-btn" onclick="showTab('orders')">📦 Orders</button>
+    <button class="tab-btn" onclick="showTab('menu')">📋 Menu</button>
+    <button class="tab-btn" onclick="showTab('stock')">📦 Stock</button>
+    <button class="tab-btn" onclick="showTab('reports')">📊 Reports</button>
     <button class="tab-btn" onclick="showTab('profile')">👤 Profile</button>
-    <button class="tab-btn" onclick="showTab('cart')">🛍️ Cart</button>
 </div>
 
 <div id="orders" class="tab-content active">
@@ -24,6 +25,21 @@
     </table>
 </div>
 
+<div id="menu" class="tab-content">
+    <h3>Menu Management</h3>
+    <p>Admin can add/update menu items.</p>
+</div>
+
+<div id="stock" class="tab-content">
+    <h3>Stock Update</h3>
+    <p>Admin can update available stock.</p>
+</div>
+
+<div id="reports" class="tab-content">
+    <h3>Reports</h3>
+    <p>Admin can view reports.</p>
+</div>
+
 <div id="profile" class="tab-content">
     <h3>Profile</h3>
     <div class="profile-card">
@@ -32,16 +48,10 @@
     </div>
 </div>
 
-<div id="cart" class="tab-content">
-    <h3>Cart</h3>
-    <p><a href="{% url 'cart' %}" class="btn">Go to Cart</a></p>
-</div>
-
 <script>
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
 }
 </script>
-
 {% endblock %}

@@ -1,13 +1,24 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-
 <h2>🏪 Vendor Dashboard</h2>
 
 <div class="dashboard-tabs">
+    <button class="tab-btn" onclick="showTab('stock')">📦 Stock Update</button>
+    <button class="tab-btn" onclick="showTab('delivery')">🚚 Deliveries</button>
     <button class="tab-btn" onclick="showTab('profile')">👤 Profile</button>
 </div>
 
-<div id="profile" class="tab-content active">
+<div id="stock" class="tab-content active">
+    <h3>Stock Update</h3>
+    <p>Vendors can update stock levels here.</p>
+</div>
+
+<div id="delivery" class="tab-content">
+    <h3>Delivery Status</h3>
+    <p>Vendors can view and update delivery status.</p>
+</div>
+
+<div id="profile" class="tab-content">
     <h3>Profile</h3>
     <div class="profile-card">
         <p><strong>Name:</strong> {{ profile.user.username }}</p>
@@ -21,5 +32,4 @@ function showTab(tabId) {
     document.getElementById(tabId).classList.add('active');
 }
 </script>
-
 {% endblock %}
