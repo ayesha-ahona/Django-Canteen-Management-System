@@ -1,18 +1,25 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<div class="dashboard-container">
-    <h2 class="dashboard-title">👤 Guest Dashboard</h2>
 
-    <div class="dashboard-menu">
-        <ul>
-            <li><a href="/menu/">🍴 Browse Menu</a></li>
-            <li><a href="/login/">🔑 Login</a></li>
-        </ul>
-    </div>
+<h2>🏪 Vendor Dashboard</h2>
 
-    <div class="orders-section">
-        <h3>ℹ Guest Access</h3>
-        <p>Please login to place an order.</p>
+<div class="dashboard-tabs">
+    <button class="tab-btn" onclick="showTab('profile')">👤 Profile</button>
+</div>
+
+<div id="profile" class="tab-content active">
+    <h3>Profile</h3>
+    <div class="profile-card">
+        <p><strong>Name:</strong> {{ profile.user.username }}</p>
+        <p><strong>Email:</strong> {{ profile.user.email }}</p>
     </div>
 </div>
+
+<script>
+function showTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+}
+</script>
+
 {% endblock %}

@@ -229,6 +229,37 @@ body {
     background: #b71c1c;
 }
 
+/* Dashboard Tabs */
+.dashboard-tabs {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: #ddd;
+    cursor: pointer;
+    border-radius: 6px;
+    font-weight: bold;
+    transition: 0.3s;
+}
+
+.tab-btn:hover {
+    background: #d32f2f;
+    color: #fff;
+}
+
+.tab-content {
+    display: none;
+    margin-top: 20px;
+}
+
+.tab-content.active {
+    display: block;
+}
+
 /* Dashboard Menu Styled as Cards */
 .dashboard-menu ul {
     list-style: none;
@@ -262,6 +293,20 @@ body {
 
 .dashboard-menu ul li:hover a {
     color: #fff;
+}
+
+/* Buttons */
+.btn {
+    background: #d32f2f;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: 0.3s;
+}
+
+.btn:hover {
+    background: #b71c1c;
 }
 
 /* Footer */

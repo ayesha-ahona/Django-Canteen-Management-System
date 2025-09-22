@@ -1,19 +1,47 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<div class="dashboard-container">
-    <h2 class="dashboard-title">👨‍💼 Admin Dashboard</h2>
 
-    <div class="dashboard-menu">
-        <ul>
-            <li><a href="#">Orders</a></li>
-            <li><a href="#">Manage Menu</a></li>
-            <li><a href="#">Reports</a></li>
-        </ul>
-    </div>
+<h2>🛠️ Admin Dashboard</h2>
 
-    <div class="orders-section">
-        <h3>📊 Orders Summary</h3>
-        <p>No data available yet.</p>
+<div class="dashboard-tabs">
+    <button class="tab-btn" onclick="showTab('orders')">📦 All Orders</button>
+    <button class="tab-btn" onclick="showTab('profile')">👤 Profile</button>
+    <button class="tab-btn" onclick="showTab('cart')">🛍️ Cart</button>
+</div>
+
+<div id="orders" class="tab-content active">
+    <h3>All Orders</h3>
+    <table class="orders-table">
+        <tr><th>User</th><th>Items</th><th>Total</th><th>Status</th></tr>
+        {% for order in orders %}
+        <tr>
+            <td>{{ order.user.username }}</td>
+            <td>{% for item in order.items.all %} {{ item.name }} <br> {% endfor %}</td>
+            <td>{{ order.total_price }} Tk</td>
+            <td class="status {{ order.status }}">{{ order.status }}</td>
+        </tr>
+        {% empty %}<tr><td colspan="4">No orders.</td></tr>{% endfor %}
+    </table>
+</div>
+
+<div id="profile" class="tab-content">
+    <h3>Profile</h3>
+    <div class="profile-card">
+        <p><strong>Name:</strong> {{ profile.user.username }}</p>
+        <p><strong>Email:</strong> {{ profile.user.email }}</p>
     </div>
 </div>
+
+<div id="cart" class="tab-content">
+    <h3>Cart</h3>
+    <p><a href="{% url 'cart' %}" class="btn">Go to Cart</a></p>
+</div>
+
+<script>
+function showTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
+    document.getElementById(tabId).classList.add('active');
+}
+</script>
+
 {% endblock %}
