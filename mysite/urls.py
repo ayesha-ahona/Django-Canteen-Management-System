@@ -7,17 +7,31 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+
     path('', views.home, name='home'),
     path('menu/', views.menu_page, name='menu'),
 
-    # Cart system
+    # Cart + Checkout
     path('cart/', views.view_cart, name='cart'),
     path('cart/add/<int:item_id>/', views.add_to_cart, name='add_to_cart'),
     path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
+    path('cart/dec/<int:item_id>/', views.decrease_cart_qty, name='decrease_cart_qty'),
+    path('cart/inc/<int:item_id>/', views.increase_cart_qty, name='increase_cart_qty'),
     path('cart/update/<int:item_id>/', views.update_cart, name='update_cart'),
     path('checkout/', views.checkout, name='checkout'),
 
+    # Orders
     path('orders/', views.orders_page, name='orders'),
+
+    # Order lifecycle (actions)
+    path('orders/<int:order_id>/accept/', views.order_accept, name='order_accept'),
+    path('orders/<int:order_id>/preparing/', views.order_preparing, name='order_preparing'),
+    path('orders/<int:order_id>/ready/', views.order_ready, name='order_ready'),
+    path('orders/<int:order_id>/delivered/', views.order_delivered, name='order_delivered'),
+    path('orders/<int:order_id>/completed/', views.order_completed, name='order_completed'),
+    path('orders/<int:order_id>/cancel/', views.order_cancel, name='order_cancel'),
+    path('orders/<int:order_id>/paid/', views.order_mark_paid, name='order_mark_paid'),
+
     path('about/', views.about_page, name='about'),
     path('contact/', views.contact_page, name='contact'),
 
