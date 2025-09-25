@@ -1,0 +1,27 @@
+# --- Django & Python ---
+__pycache__/
+*.py[cod]
+*.sqlite3
+
+# --- Virtual environment ---
+venv/
+
+# --- Environment & config ---
+.env
+*.env
+
+# --- IDE / Editor files ---
+.vscode/
+.idea/
+
+# --- OS generated files ---
+.DS_Store
+Thumbs.db
+
+# --- Logs & static compiled ---
+*.log
+/staticfiles/
+/media/
+
+# --- Migrations cache ---
+*/migrations/__pycache__/
