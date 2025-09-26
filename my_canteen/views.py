@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.contrib import messages
 from .models import MenuItem, UserProfile, Order, OrderItem
 from .forms import CustomSignupForm
@@ -21,6 +21,7 @@ def home(request):
 
 
 # ---------- Menu ----------
+@login_required
 def menu_page(request):
     query = request.GET.get('q')
     min_price = request.GET.get('min_price')
@@ -35,7 +36,28 @@ def menu_page(request):
     if max_price:
         items = items.filter(price__lte=max_price)
 
-    return render(request, 'my_canteen/menu.html', {'items': items})
+    # ---- 🔥 AI Suggestion / Recommendation ----
+    user_orders = (
+        Order.objects.filter(user=request.user)
+        .values('orderitem__item')
+        .annotate(count=Count('orderitem__item'))
+        .order_by('-count')
+    )
+
+    if user_orders.exists():
+        top_item_id = user_orders[0]['orderitem__item']
+        suggested_items = MenuItem.objects.filter(id=top_item_id, is_active=True)
+    else:
+        suggested_items = MenuItem.objects.filter(is_popular=True, is_active=True)[:4]
+
+    return render(
+        request,
+        'my_canteen/menu.html',
+        {
+            'items': items,
+            'suggested_items': suggested_items
+        }
+    )
 
 
 # ---------- Cart ----------
@@ -115,7 +137,6 @@ def checkout(request):
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
 
-    # Create order
     order = Order.objects.create(
         user=request.user,
         total_price=0,
@@ -126,7 +147,6 @@ def checkout(request):
     )
 
     total = 0
-    # Create order items + stock deduction
     for item_id, qty in cart.items():
         item = get_object_or_404(MenuItem, id=item_id)
         if item.stock < qty:
@@ -134,7 +154,6 @@ def checkout(request):
             order.delete()
             return redirect("cart")
 
-        # deduct stock
         item.stock -= qty
         item.save()
 
@@ -146,7 +165,6 @@ def checkout(request):
     order.total_price = total
     order.save()
 
-    # clear cart
     request.session["cart"] = {}
     messages.success(request, f"Order placed successfully! Total: {total} Tk (status: Pending)")
     return redirect("orders")
@@ -156,7 +174,6 @@ def checkout(request):
 @login_required
 def orders_page(request):
     profile = UserProfile.objects.get(user=request.user)
-    # users দেখবে নিজের order, admin/superadmin সব
     if get_role(request.user) in ["superadmin", "admin"]:
         orders = Order.objects.all().order_by("-created_at")
     elif get_role(request.user) == "staff":
@@ -253,7 +270,7 @@ def settings_page(request):
     return render(request, 'my_canteen/settings.html', {"profile": profile})
 
 
-# ---------- Order Lifecycle Actions ----------
+# ---------- Order Lifecycle ----------
 @login_required
 def order_accept(request, order_id):
     if not require_roles(request.user, ['superadmin', 'admin']):
