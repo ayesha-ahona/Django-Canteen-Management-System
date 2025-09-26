@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Q, Count
+from django.db.models import Q
 from django.contrib import messages
 from .models import MenuItem, UserProfile, Order, OrderItem
 from .forms import CustomSignupForm
@@ -21,7 +21,6 @@ def home(request):
 
 
 # ---------- Menu ----------
-@login_required
 def menu_page(request):
     query = request.GET.get('q')
     min_price = request.GET.get('min_price')
@@ -36,27 +35,16 @@ def menu_page(request):
     if max_price:
         items = items.filter(price__lte=max_price)
 
-    # ---- 🔥 AI Suggestion / Recommendation ----
-    user_orders = (
-        Order.objects.filter(user=request.user)
-        .values('orderitem__item')
-        .annotate(count=Count('orderitem__item'))
-        .order_by('-count')
-    )
-
-    if user_orders.exists():
-        top_item_id = user_orders[0]['orderitem__item']
-        suggested_items = MenuItem.objects.filter(id=top_item_id, is_active=True)
-    else:
-        suggested_items = MenuItem.objects.filter(is_popular=True, is_active=True)[:4]
+    # 🔥 Recommendations
+    recommended = []
+    if request.user.is_authenticated:
+        previous_items = MenuItem.objects.filter(orderitem__order__user=request.user).distinct()
+        recommended = previous_items[:4]
 
     return render(
         request,
         'my_canteen/menu.html',
-        {
-            'items': items,
-            'suggested_items': suggested_items
-        }
+        {'items': items, 'recommended': recommended}
     )
 
 
@@ -157,9 +145,7 @@ def checkout(request):
         item.stock -= qty
         item.save()
 
-        OrderItem.objects.create(
-            order=order, item=item, quantity=qty, unit_price=item.price
-        )
+        OrderItem.objects.create(order=order, item=item, quantity=qty, unit_price=item.price)
         total += float(item.price) * qty
 
     order.total_price = total
@@ -178,6 +164,8 @@ def orders_page(request):
         orders = Order.objects.all().order_by("-created_at")
     elif get_role(request.user) == "staff":
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by("-created_at")
+    elif get_role(request.user) == "vendor":
+        orders = Order.objects.filter(status__in=["ready", "delivered"]).order_by("-created_at")
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
 
@@ -232,8 +220,8 @@ def dashboard(request):
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by('-created_at')
         items = None
     elif role == "vendor":
-        orders = []
-        items = MenuItem.objects.all()
+        orders = Order.objects.filter(status__in=["ready", "delivered"]).order_by('-created_at')
+        items = None
     else:
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
         items = None
@@ -270,7 +258,7 @@ def settings_page(request):
     return render(request, 'my_canteen/settings.html', {"profile": profile})
 
 
-# ---------- Order Lifecycle ----------
+# ---------- Order Lifecycle Actions ----------
 @login_required
 def order_accept(request, order_id):
     if not require_roles(request.user, ['superadmin', 'admin']):
@@ -306,7 +294,7 @@ def order_ready(request, order_id):
 
 @login_required
 def order_delivered(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin']):
+    if not require_roles(request.user, ['superadmin', 'admin', 'vendor']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)

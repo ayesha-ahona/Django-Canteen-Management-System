@@ -1,14 +1,14 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
+
 <h2>👤 Guest Dashboard</h2>
 
 <div class="dashboard-tabs">
     <button class="tab-btn" onclick="showTab('orders')">🛒 My Orders</button>
-    <button class="tab-btn" onclick="showTab('cart')">🛍️ Cart</button>
     <button class="tab-btn" onclick="showTab('profile')">👤 Profile</button>
+    <button class="tab-btn" onclick="showTab('cart')">🛍️ Cart</button>
 </div>
 
-<!-- Orders -->
 <div id="orders" class="tab-content active">
     <h3>My Orders</h3>
     <table class="orders-table">
@@ -17,26 +17,17 @@
         <tr>
             <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
             <td>
-                {% for item in order.items.all %}
-                    {{ item.name }} <br>
+                {% for oi in order.orderitem_set.all %}
+                    {{ oi.item.name }} × {{ oi.quantity }} <br>
                 {% endfor %}
             </td>
             <td>{{ order.total_price }} Tk</td>
             <td class="status {{ order.status }}">{{ order.status }}</td>
         </tr>
-        {% empty %}
-        <tr><td colspan="4">No orders yet.</td></tr>
-        {% endfor %}
+        {% empty %}<tr><td colspan="4">No orders yet.</td></tr>{% endfor %}
     </table>
 </div>
 
-<!-- Cart -->
-<div id="cart" class="tab-content">
-    <h3>My Cart</h3>
-    <p><a href="{% url 'cart' %}" class="btn">Go to Cart</a></p>
-</div>
-
-<!-- Profile -->
 <div id="profile" class="tab-content">
     <h3>Profile</h3>
     <div class="profile-card">
@@ -45,10 +36,16 @@
     </div>
 </div>
 
+<div id="cart" class="tab-content">
+    <h3>My Cart</h3>
+    <p><a href="{% url 'cart' %}" class="btn">Go to Cart</a></p>
+</div>
+
 <script>
 function showTab(tabId) {
     document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
     document.getElementById(tabId).classList.add('active');
 }
 </script>
+
 {% endblock %}

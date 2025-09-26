@@ -1,21 +1,48 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
+
 <h2>🏪 Vendor Dashboard</h2>
 
 <div class="dashboard-tabs">
-    <button class="tab-btn" onclick="showTab('stock')">📦 Stock Update</button>
-    <button class="tab-btn" onclick="showTab('delivery')">🚚 Deliveries</button>
+    <button class="tab-btn" onclick="showTab('deliveries')">📦 My Deliveries</button>
     <button class="tab-btn" onclick="showTab('profile')">👤 Profile</button>
 </div>
 
-<div id="stock" class="tab-content active">
-    <h3>Stock Update</h3>
-    <p>Vendors can update stock levels here.</p>
-</div>
-
-<div id="delivery" class="tab-content">
-    <h3>Delivery Status</h3>
-    <p>Vendors can view and update delivery status.</p>
+<div id="deliveries" class="tab-content active">
+    <h3>My Deliveries (Orders to Deliver)</h3>
+    <table class="orders-table">
+        <tr>
+            <th>#</th>
+            <th>User</th>
+            <th>Items</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        {% for order in orders %}
+        <tr>
+            <td>#{{ order.id }}</td>
+            <td>{{ order.user.username }}</td>
+            <td>
+                {% for oi in order.orderitem_set.all %}
+                    {{ oi.item.name }} × {{ oi.quantity }}<br>
+                {% endfor %}
+            </td>
+            <td>{{ order.total_price }} Tk</td>
+            <td class="status {{ order.status }}">{{ order.status }}</td>
+            <td>
+                {% if order.status == "ready" %}
+                    <form method="post" action="{% url 'order_delivered' order.id %}" style="display:inline;">
+                        {% csrf_token %}
+                        <button class="btn">Mark as Delivered</button>
+                    </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6">No deliveries yet.</td></tr>
+        {% endfor %}
+    </table>
 </div>
 
 <div id="profile" class="tab-content">
@@ -32,4 +59,5 @@ function showTab(tabId) {
     document.getElementById(tabId).classList.add('active');
 }
 </script>
+
 {% endblock %}
