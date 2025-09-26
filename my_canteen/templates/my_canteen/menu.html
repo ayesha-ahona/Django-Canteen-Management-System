@@ -9,38 +9,10 @@
     <button type="submit">Search</button>
 </form>
 
-{% if suggested_items %}
-<div class="popular">
-    <h2>✨ Recommended For You</h2>
-    <div class="card-grid">
-        {% for item in suggested_items %}
-        <div class="card">
-            {% if item.image %}
-                <img src="{{ item.image.url }}" alt="{{ item.name }}">
-            {% else %}
-                <img src="https://via.placeholder.com/150" alt="No Image">
-            {% endif %}
-            <h3>{{ item.name }}</h3>
-            <p>{{ item.price }} Tk</p>
-            {% if item.stock > 0 %}
-                <a href="{% url 'add_to_cart' item.id %}">
-                    <button>Add to Cart</button>
-                </a>
-            {% else %}
-                <p style="color:red;font-weight:bold;">Out of Stock</p>
-            {% endif %}
-        </div>
-        {% endfor %}
-    </div>
-</div>
-{% endif %}
-
-<hr style="margin:40px 0; border:1px solid #ddd;">
-
-<h2 style="text-align:center; color:#d32f2f;">🍽️ All Menu Items</h2>
-
+{% if recommended %}
+<h3 style="margin-top:30px; color:#d32f2f;">✨ Recommended For You</h3>
 <div class="card-grid">
-    {% for item in items %}
+    {% for item in recommended %}
     <div class="card">
         {% if item.image %}
             <img src="{{ item.image.url }}" alt="{{ item.name }}">
@@ -53,6 +25,27 @@
             <a href="{% url 'add_to_cart' item.id %}">
                 <button>Add to Cart</button>
             </a>
+        {% else %}
+            <p style="color:red;font-weight:bold;">Out of Stock</p>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<h3 style="margin-top:40px; color:#d32f2f;">🍽️ All Menu Items</h3>
+<div class="card-grid">
+    {% for item in items %}
+    <div class="card">
+        {% if item.image %}
+            <img src="{{ item.image.url }}" alt="{{ item.name }}">
+        {% else %}
+            <img src="https://via.placeholder.com/150" alt="No Image">
+        {% endif %}
+        <h3>{{ item.name }}</h3>
+        <p>{{ item.price }} Tk</p>
+        {% if item.stock > 0 %}
+            <a href="{% url 'add_to_cart' item.id %}"><button>Add to Cart</button></a>
         {% else %}
             <p style="color:red;font-weight:bold;">Out of Stock</p>
         {% endif %}

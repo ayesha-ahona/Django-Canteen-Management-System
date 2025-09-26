@@ -23,7 +23,7 @@ urlpatterns = [
     # Orders
     path('orders/', views.orders_page, name='orders'),
 
-    # Order lifecycle (actions)
+    # Order lifecycle
     path('orders/<int:order_id>/accept/', views.order_accept, name='order_accept'),
     path('orders/<int:order_id>/preparing/', views.order_preparing, name='order_preparing'),
     path('orders/<int:order_id>/ready/', views.order_ready, name='order_ready'),
@@ -32,13 +32,16 @@ urlpatterns = [
     path('orders/<int:order_id>/cancel/', views.order_cancel, name='order_cancel'),
     path('orders/<int:order_id>/paid/', views.order_mark_paid, name='order_mark_paid'),
 
+    # Static pages
     path('about/', views.about_page, name='about'),
     path('contact/', views.contact_page, name='contact'),
 
+    # Auth
     path('signup/', views.signup_page, name='signup'),
     path('login/', auth_views.LoginView.as_view(template_name='my_canteen/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
 
+    # Dashboard & Profile
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.profile_page, name='profile'),
     path('settings/', views.settings_page, name='settings'),

@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.contrib import messages
 from .models import MenuItem, UserProfile, Order, OrderItem
 from .forms import CustomSignupForm
@@ -21,6 +21,7 @@ def home(request):
 
 
 # ---------- Menu ----------
+@login_required
 def menu_page(request):
     query = request.GET.get('q')
     min_price = request.GET.get('min_price')
@@ -35,11 +36,14 @@ def menu_page(request):
     if max_price:
         items = items.filter(price__lte=max_price)
 
-    # 🔥 Recommendations
+    # ===== Recommendation: user previous order থেকে top items =====
     recommended = []
     if request.user.is_authenticated:
-        previous_items = MenuItem.objects.filter(orderitem__order__user=request.user).distinct()
-        recommended = previous_items[:4]
+        recommended = (
+            MenuItem.objects.filter(orderitem__order__user=request.user)
+            .annotate(times=Count('orderitem'))
+            .order_by('-times')[:4]
+        )
 
     return render(
         request,
@@ -145,7 +149,9 @@ def checkout(request):
         item.stock -= qty
         item.save()
 
-        OrderItem.objects.create(order=order, item=item, quantity=qty, unit_price=item.price)
+        OrderItem.objects.create(
+            order=order, item=item, quantity=qty, unit_price=item.price
+        )
         total += float(item.price) * qty
 
     order.total_price = total
@@ -164,8 +170,6 @@ def orders_page(request):
         orders = Order.objects.all().order_by("-created_at")
     elif get_role(request.user) == "staff":
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by("-created_at")
-    elif get_role(request.user) == "vendor":
-        orders = Order.objects.filter(status__in=["ready", "delivered"]).order_by("-created_at")
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
 
@@ -220,8 +224,8 @@ def dashboard(request):
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by('-created_at')
         items = None
     elif role == "vendor":
-        orders = Order.objects.filter(status__in=["ready", "delivered"]).order_by('-created_at')
-        items = None
+        orders = Order.objects.filter(status__in=["ready", "delivered", "completed"]).order_by('-created_at')
+        items = MenuItem.objects.all()
     else:
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
         items = None
@@ -294,7 +298,7 @@ def order_ready(request, order_id):
 
 @login_required
 def order_delivered(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin', 'vendor']):
+    if not require_roles(request.user, ['superadmin', 'admin']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
