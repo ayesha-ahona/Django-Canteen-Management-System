@@ -13,3 +13,7 @@ __pycache__/
 # --- IDE files ---
 .vscode/
 .idea/
+
+# --- Django DB ---
+db.sqlite3
+*.sqlite3
