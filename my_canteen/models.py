@@ -14,15 +14,11 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='guest')
     phone = models.CharField(max_length=15, blank=True, null=True)
-
-    def __str__(self):
-        return f"{self.user.username} ({self.role})"
-
+    def __str__(self): return f"{self.user.username} ({self.role})"
 
 class Category(models.Model):
     name = models.CharField(max_length=50)
     def __str__(self): return self.name
-
 
 class MenuItem(models.Model):
     name = models.CharField(max_length=100)
@@ -33,41 +29,29 @@ class MenuItem(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True)
     is_active = models.BooleanField(default=True)
     is_popular = models.BooleanField(default=False)
-
     def __str__(self): return self.name
-
 
 class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
         ('accepted', 'Accepted'),
         ('preparing', 'Preparing'),
-        ('ready', 'Ready for pickup/delivery'),
+        ('ready', 'Ready'),
         ('delivered', 'Delivered'),
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
     ]
-    PAYMENT_STATUS = [
-        ('unpaid', 'Unpaid'),
-        ('paid', 'Paid'),
-    ]
+    PAYMENT_STATUS_CHOICES = [('unpaid', 'Unpaid'), ('paid', 'Paid')]
+    PAYMENT_METHOD_CHOICES = [('cash', 'Cash')]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    total_price = models.DecimalField(max_digits=8, decimal_places=2, default=0)
+    total_price = models.DecimalField(max_digits=8, decimal_places=2)
     address = models.CharField(max_length=255)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
-    payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS, default='unpaid')
-    payment_method = models.CharField(max_length=30, blank=True, null=True)  # e.g., "cash", "card"
-    note = models.CharField(max_length=255, blank=True, null=True)
+    payment_status = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='unpaid')
+    payment_method = models.CharField(max_length=10, choices=PAYMENT_METHOD_CHOICES, default='cash')
     created_at = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return f"Order {self.id} by {self.user.username}"
-
-    @property
-    def items_count(self):
-        return sum([oi.quantity for oi in self.orderitem_set.all()])
-
+    def __str__(self): return f"Order {self.id} by {self.user.username}"
 
 class OrderItem(models.Model):
     order = models.ForeignKey(Order, on_delete=models.CASCADE)
@@ -75,14 +59,23 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField(default=1)
     unit_price = models.DecimalField(max_digits=6, decimal_places=2)
 
-    def line_total(self):
-        return self.quantity * self.unit_price
+# --- NEW: Review model ---
+class Review(models.Model):
+    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]  # 1..5
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE)
+    rating = models.IntegerField(choices=RATING_CHOICES)
+    comment = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'item')  # প্রতি user প্রতি item একটাই রিভিউ
 
     def __str__(self):
-        return f"{self.item.name} x {self.quantity}"
+        return f"{self.item.name} - {self.user.username} ({self.rating})"
 
 
-# ✅ Signals: ensure UserProfile always created
+# Signals (unchanged)
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 

@@ -1,10 +1,11 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Q, Count
+from django.db.models import Q, Avg, Count
 from django.contrib import messages
-from .models import MenuItem, UserProfile, Order, OrderItem
-from .forms import CustomSignupForm
+from .models import MenuItem, UserProfile, Order, OrderItem, Review
+from .forms import CustomSignupForm, ReviewForm
+
 
 # ---------- Helpers ----------
 def get_role(user):
@@ -21,7 +22,6 @@ def home(request):
 
 
 # ---------- Menu ----------
-@login_required
 def menu_page(request):
     query = request.GET.get('q')
     min_price = request.GET.get('min_price')
@@ -36,20 +36,79 @@ def menu_page(request):
     if max_price:
         items = items.filter(price__lte=max_price)
 
-    # ===== Recommendation: user previous order থেকে top items =====
-    recommended = []
-    if request.user.is_authenticated:
-        recommended = (
-            MenuItem.objects.filter(orderitem__order__user=request.user)
-            .annotate(times=Count('orderitem'))
-            .order_by('-times')[:4]
-        )
+    return render(request, 'my_canteen/menu.html', {'items': items})
 
-    return render(
-        request,
-        'my_canteen/menu.html',
-        {'items': items, 'recommended': recommended}
-    )
+
+# ---------- Item Detail + Reviews ----------
+def item_detail(request, item_id):
+    item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+
+    # Reviews + aggregate
+    reviews = Review.objects.filter(item=item).select_related('user').order_by('-created_at')
+    agg = reviews.aggregate(avg=Avg('rating'), cnt=Count('id'))
+    avg_rating = agg['avg'] or 0
+    reviews_count = agg['cnt'] or 0
+
+    # Can current user review?
+    can_review, already = False, False
+    form = None
+    if request.user.is_authenticated:
+        purchased = OrderItem.objects.filter(
+            order__user=request.user,
+            order__status__in=['delivered', 'completed'],
+            item=item
+        ).exists()
+        already = Review.objects.filter(user=request.user, item=item).exists()
+        can_review = purchased and not already
+        if can_review:
+            form = ReviewForm()
+
+    context = {
+        "item": item,
+        "reviews": reviews,
+        "avg_rating": round(avg_rating, 1),
+        "reviews_count": reviews_count,
+        "can_review": can_review,
+        "already": already,
+        "form": form,
+    }
+    return render(request, "my_canteen/item_detail.html", context)
+
+
+@login_required
+def submit_review(request, item_id):
+    item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+
+    # eligibility re-check
+    purchased = OrderItem.objects.filter(
+        order__user=request.user,
+        order__status__in=['delivered', 'completed'],
+        item=item
+    ).exists()
+    if not purchased:
+        messages.error(request, "You can review only after you have received this item.")
+        return redirect("item_detail", item_id=item.id)
+
+    if Review.objects.filter(user=request.user, item=item).exists():
+        messages.info(request, "You already reviewed this item.")
+        return redirect("item_detail", item_id=item.id)
+
+    if request.method == "POST":
+        form = ReviewForm(request.POST)
+        if form.is_valid():
+            Review.objects.create(
+                user=request.user,
+                item=item,
+                rating=form.cleaned_data['rating'],
+                comment=form.cleaned_data['comment']
+            )
+            messages.success(request, "Thanks for your feedback!")
+            return redirect("item_detail", item_id=item.id)
+        else:
+            messages.error(request, "Invalid input.")
+            return redirect("item_detail", item_id=item.id)
+
+    return redirect("item_detail", item_id=item.id)
 
 
 # ---------- Cart ----------
@@ -149,9 +208,7 @@ def checkout(request):
         item.stock -= qty
         item.save()
 
-        OrderItem.objects.create(
-            order=order, item=item, quantity=qty, unit_price=item.price
-        )
+        OrderItem.objects.create(order=order, item=item, quantity=qty, unit_price=item.price)
         total += float(item.price) * qty
 
     order.total_price = total
@@ -224,7 +281,7 @@ def dashboard(request):
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by('-created_at')
         items = None
     elif role == "vendor":
-        orders = Order.objects.filter(status__in=["ready", "delivered", "completed"]).order_by('-created_at')
+        orders = Order.objects.filter(status__in=["ready", "delivered"]).order_by('-created_at')
         items = MenuItem.objects.all()
     else:
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
@@ -262,7 +319,7 @@ def settings_page(request):
     return render(request, 'my_canteen/settings.html', {"profile": profile})
 
 
-# ---------- Order Lifecycle Actions ----------
+# ---------- Order Lifecycle ----------
 @login_required
 def order_accept(request, order_id):
     if not require_roles(request.user, ['superadmin', 'admin']):
@@ -298,7 +355,7 @@ def order_ready(request, order_id):
 
 @login_required
 def order_delivered(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin']):
+    if not require_roles(request.user, ['superadmin', 'admin', 'vendor']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
