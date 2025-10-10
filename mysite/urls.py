@@ -6,20 +6,15 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
-    # Admin
     path('admin/', admin.site.urls),
 
-    # Home + Menu
     path('', views.home, name='home'),
     path('menu/', views.menu_page, name='menu'),
-
-    # ⭐ NEW: Item details + Review system
-    path('menu/<int:item_id>/', views.item_detail, name='item_detail'),
-    path('menu/<int:item_id>/review/', views.submit_review, name='submit_review'),
 
     # Cart + Checkout
     path('cart/', views.view_cart, name='cart'),
     path('cart/add/<int:item_id>/', views.add_to_cart, name='add_to_cart'),
+    path('cart/add/<int:item_id>/<int:qty>/', views.add_to_cart_qty, name='add_to_cart_qty'),  # ✅ added route
     path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
     path('cart/dec/<int:item_id>/', views.decrease_cart_qty, name='decrease_cart_qty'),
     path('cart/inc/<int:item_id>/', views.increase_cart_qty, name='increase_cart_qty'),
@@ -29,7 +24,7 @@ urlpatterns = [
     # Orders
     path('orders/', views.orders_page, name='orders'),
 
-    # Order lifecycle (status update)
+    # Order lifecycle (actions)
     path('orders/<int:order_id>/accept/', views.order_accept, name='order_accept'),
     path('orders/<int:order_id>/preparing/', views.order_preparing, name='order_preparing'),
     path('orders/<int:order_id>/ready/', views.order_ready, name='order_ready'),
@@ -42,17 +37,16 @@ urlpatterns = [
     path('about/', views.about_page, name='about'),
     path('contact/', views.contact_page, name='contact'),
 
-    # Authentication
+    # Auth
     path('signup/', views.signup_page, name='signup'),
     path('login/', auth_views.LoginView.as_view(template_name='my_canteen/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
 
-    # Dashboard + Profile
+    # Dashboard & Profile
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.profile_page, name='profile'),
     path('settings/', views.settings_page, name='settings'),
 ]
 
-# Serve media files during development
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
