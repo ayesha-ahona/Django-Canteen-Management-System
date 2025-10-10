@@ -2,65 +2,61 @@
 {% block content %}
 
 <div class="item-detail-container">
-    <div class="item-image">
-        {% if item.image %}
-            <img src="{{ item.image.url }}" alt="{{ item.name }}">
-        {% else %}
-            <img src="https://via.placeholder.com/400" alt="No Image">
-        {% endif %}
-    </div>
+  <div class="item-image">
+    {% if item.image %}
+      <img src="{{ item.image.url }}" alt="{{ item.name }}">
+    {% else %}
+      <img src="https://via.placeholder.com/400x250" alt="Food">
+    {% endif %}
+  </div>
 
-    <div class="item-info">
-        <h2>{{ item.name }}</h2>
-        <p class="item-price"><strong>{{ item.price }} Tk</strong></p>
-        <p class="item-rating">⭐ {{ item.avg_rating|default:0|floatformat:1 }} ({{ item.review_count }} reviews)</p>
-        <p class="item-description">{{ item.description|default:"No description available." }}</p>
-
-        {% if item.stock > 0 %}
-            <a href="{% url 'add_to_cart' item.id %}" class="btn">Add to Cart</a>
-        {% else %}
-            <p class="out-of-stock">Out of Stock</p>
-        {% endif %}
+  <div class="item-info">
+    <h2>{{ item.name }}</h2>
+    <div class="item-price">{{ item.price }} Tk</div>
+    <div class="item-rating">
+      ⭐ {{ avg_rating }} / 5 ({{ total_reviews }} reviews)
     </div>
+    <div class="item-description">{{ item.description }}</div>
+
+    {% if item.stock > 0 %}
+      <a href="{% url 'add_to_cart' item.id %}">
+        <button class="btn">Add to Cart</button>
+      </a>
+    {% else %}
+      <p class="out-of-stock">Out of Stock</p>
+    {% endif %}
+  </div>
 </div>
 
-<hr class="divider">
-
-<!-- Feedback & Ratings Section -->
 <div class="feedback-section">
-    <h3>Customer Reviews</h3>
+  <h3>💬 Customer Feedback</h3>
 
-    {% if reviews %}
-        {% for review in reviews %}
-        <div class="review-card">
-            <p><strong>{{ review.user.username }}</strong> 
-                <span class="review-rating">⭐ {{ review.rating }}</span>
-            </p>
-            <p class="review-text">{{ review.comment }}</p>
-            <small class="review-date">{{ review.created_at|date:"M d, Y" }}</small>
-        </div>
-        {% endfor %}
-    {% else %}
-        <p>No reviews yet. Be the first to rate this item!</p>
-    {% endif %}
+  {% for r in reviews %}
+  <div class="review-card">
+    <strong>{{ r.user.username }}</strong>
+    <span class="review-rating">⭐ {{ r.rating }}</span>
+    <p class="review-text">{{ r.comment }}</p>
+    <p class="review-date">{{ r.created_at|date:"M d, Y" }}</p>
+  </div>
+  {% empty %}
+  <p>No reviews yet. Be the first to review!</p>
+  {% endfor %}
 
-    <hr class="divider">
-
-    {% if user.is_authenticated %}
-    <h4>Leave a Review</h4>
-    <form method="post" class="review-form">
-        {% csrf_token %}
-        <label>Rating (1–5):</label>
-        <input type="number" name="rating" min="1" max="5" required>
-
-        <label>Comment:</label>
-        <textarea name="comment" rows="3" placeholder="Write your feedback..." required></textarea>
-
-        <button type="submit" class="btn">Submit Review</button>
-    </form>
-    {% else %}
-        <p><a href="{% url 'login' %}">Login</a> to leave a review.</p>
-    {% endif %}
+  {% if can_review %}
+  <hr class="divider">
+  <form method="POST" action="{% url 'submit_review' item.id %}" class="review-form">
+    {% csrf_token %}
+    <label>Rating (1–5):</label>
+    <input type="number" name="rating" min="1" max="5" required>
+    <label>Comment:</label>
+    <textarea name="comment" rows="3" required></textarea>
+    <button class="btn">Submit Review</button>
+  </form>
+  {% elif already %}
+  <p style="color:green;">✅ You already submitted a review for this item.</p>
+  {% elif not user.is_authenticated %}
+  <p>Please <a href="{% url 'login' %}">login</a> to leave a review.</p>
+  {% endif %}
 </div>
 
 {% endblock %}
