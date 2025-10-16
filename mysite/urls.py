@@ -4,6 +4,7 @@ from my_canteen import views
 from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
+from django.shortcuts import redirect
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -15,6 +16,8 @@ urlpatterns = [
     # Item detail + feedback
     path('item/<int:item_id>/', views.item_detail, name='item_detail'),
     path('item/<int:item_id>/review/', views.submit_review, name='submit_review'),
+    path('item/<int:item_id>/review/edit/', views.edit_review, name='edit_review'),
+    path('item/<int:item_id>/review/delete/', views.delete_review, name='delete_review'),
 
     # Cart + Checkout
     path('cart/', views.view_cart, name='cart'),
@@ -51,6 +54,10 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.profile_page, name='profile'),
     path('settings/', views.settings_page, name='settings'),
+
+    # Vendor Dashboard (superadmin → vendor)
+    path('dashboard/vendor/', views.vendor_dashboard, name='vendor_dashboard'),
+    path('dashboard/superadmin/', lambda r: redirect('vendor_dashboard'), name='superadmin_legacy'),
 ]
 
 if settings.DEBUG:

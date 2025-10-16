@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q, Avg, Count
 from django.contrib import messages
+from django.http import HttpResponseForbidden
 
 from .models import MenuItem, UserProfile, Order, OrderItem, Review
 from .forms import CustomSignupForm, ReviewForm
@@ -10,7 +11,10 @@ from .forms import CustomSignupForm, ReviewForm
 
 # ---------- Helpers ----------
 def get_role(user):
-    return user.userprofile.role
+    try:
+        return user.userprofile.role
+    except UserProfile.DoesNotExist:
+        return "guest"
 
 def require_roles(user, allowed):
     return get_role(user) in allowed
@@ -103,6 +107,37 @@ def submit_review(request, item_id):
         else:
             messages.error(request, "Invalid input.")
     return redirect("item_detail", item_id=item.id)
+
+
+# ---------- Review Edit/Delete ----------
+@login_required
+def edit_review(request, item_id):
+    item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+    review = get_object_or_404(Review, item=item, user=request.user)
+
+    if request.method == "POST":
+        form = ReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your review has been updated.")
+            return redirect("item_detail", item_id=item.id)
+    else:
+        form = ReviewForm(instance=review)
+
+    return render(request, "my_canteen/review_edit.html", {"item": item, "form": form})
+
+
+@login_required
+def delete_review(request, item_id):
+    item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+    review = get_object_or_404(Review, item=item, user=request.user)
+
+    if request.method == "POST":
+        review.delete()
+        messages.success(request, "Your review has been deleted.")
+        return redirect("item_detail", item_id=item.id)
+
+    return HttpResponseForbidden("Invalid request")
 
 
 # ---------- Cart ----------
@@ -222,12 +257,12 @@ def checkout(request):
 @login_required
 def orders_page(request):
     profile = UserProfile.objects.get(user=request.user)
-    if get_role(request.user) in ["superadmin", "admin"]:
+    role = get_role(request.user)
+
+    if role in ["vendor", "admin"]:
         orders = Order.objects.all().order_by("-created_at")
-    elif get_role(request.user) == "staff":
+    elif role == "staff":
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by("-created_at")
-    elif get_role(request.user) == "vendor":
-        orders = Order.objects.filter(status__in=["ready", "delivered"]).order_by("-created_at")
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
 
@@ -248,13 +283,12 @@ def signup_page(request):
         form = CustomSignupForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.email = form.cleaned_data['email']
+            user.email = form.cleaned_data.get('email')
             user.save()
 
-            role = form.cleaned_data['role']
+            is_first_user = (User.objects.count() == 1)
+            role = 'vendor' if is_first_user else 'guest'
             phone = form.cleaned_data.get('phone')
-            if User.objects.count() == 1:
-                role = 'superadmin'
 
             profile = user.userprofile
             profile.role = role
@@ -274,21 +308,27 @@ def dashboard(request):
     profile = UserProfile.objects.get(user=request.user)
     role = profile.role
 
-    if role in ["superadmin", "admin"]:
+    if role in ["vendor", "admin"]:
         orders = Order.objects.all().order_by('-created_at')
         items = MenuItem.objects.all()
     elif role == "staff":
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by('-created_at')
         items = None
-    elif role == "vendor":
-        orders = Order.objects.filter(status__in=["ready", "delivered"]).order_by('-created_at')
-        items = MenuItem.objects.all()
     else:
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
         items = None
 
     template_name = f"my_canteen/dashboard/{role}.html"
     return render(request, template_name, {"profile": profile, "orders": orders, "items": items})
+
+
+# ---------- Vendor Dashboard ----------
+@login_required
+def vendor_dashboard(request):
+    if get_role(request.user) != 'vendor':
+        messages.error(request, "Only vendor can access this dashboard.")
+        return redirect('home')
+    return render(request, 'my_canteen/dashboard/superadmin.html')
 
 
 # ---------- Profile ----------
@@ -319,7 +359,7 @@ def settings_page(request):
 # ---------- Order Lifecycle ----------
 @login_required
 def order_accept(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin']):
+    if not require_roles(request.user, ['vendor', 'admin']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
@@ -330,7 +370,7 @@ def order_accept(request, order_id):
 
 @login_required
 def order_preparing(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin', 'staff']):
+    if not require_roles(request.user, ['vendor', 'admin', 'staff']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
@@ -341,7 +381,7 @@ def order_preparing(request, order_id):
 
 @login_required
 def order_ready(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin', 'staff']):
+    if not require_roles(request.user, ['vendor', 'admin', 'staff']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
@@ -352,7 +392,7 @@ def order_ready(request, order_id):
 
 @login_required
 def order_delivered(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin', 'vendor']):
+    if not require_roles(request.user, ['vendor', 'admin']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
@@ -363,7 +403,7 @@ def order_delivered(request, order_id):
 
 @login_required
 def order_completed(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin']):
+    if not require_roles(request.user, ['vendor', 'admin']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
@@ -377,7 +417,7 @@ def order_completed(request, order_id):
 
 @login_required
 def order_cancel(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin']):
+    if not require_roles(request.user, ['vendor', 'admin']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
@@ -388,7 +428,7 @@ def order_cancel(request, order_id):
 
 @login_required
 def order_mark_paid(request, order_id):
-    if not require_roles(request.user, ['superadmin', 'admin']):
+    if not require_roles(request.user, ['vendor', 'admin']):
         messages.error(request, "Not authorized.")
         return redirect('dashboard')
     order = get_object_or_404(Order, id=order_id)
