@@ -4,6 +4,7 @@ from my_canteen import views
 from django.contrib.auth import views as auth_views
 from django.conf import settings
 from django.conf.urls.static import static
+from django.shortcuts import redirect  # ✅ redirect import লাগবে
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -51,6 +52,10 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('profile/', views.profile_page, name='profile'),
     path('settings/', views.settings_page, name='settings'),
+
+    # ✅ Vendor Dashboard (superadmin → vendor)
+    path('dashboard/vendor/', views.vendor_dashboard, name='vendor_dashboard'),
+    path('dashboard/superadmin/', lambda r: redirect('vendor_dashboard'), name='superadmin_legacy'),
 ]
 
 if settings.DEBUG:
