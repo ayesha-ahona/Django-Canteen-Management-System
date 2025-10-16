@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q, Avg, Count
 from django.contrib import messages
+from django.http import HttpResponseForbidden
 
 from .models import MenuItem, UserProfile, Order, OrderItem, Review
 from .forms import CustomSignupForm, ReviewForm
@@ -10,7 +11,6 @@ from .forms import CustomSignupForm, ReviewForm
 
 # ---------- Helpers ----------
 def get_role(user):
-    # safe access
     try:
         return user.userprofile.role
     except UserProfile.DoesNotExist:
@@ -107,6 +107,37 @@ def submit_review(request, item_id):
         else:
             messages.error(request, "Invalid input.")
     return redirect("item_detail", item_id=item.id)
+
+
+# ---------- Review Edit/Delete ----------
+@login_required
+def edit_review(request, item_id):
+    item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+    review = get_object_or_404(Review, item=item, user=request.user)
+
+    if request.method == "POST":
+        form = ReviewForm(request.POST, instance=review)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Your review has been updated.")
+            return redirect("item_detail", item_id=item.id)
+    else:
+        form = ReviewForm(instance=review)
+
+    return render(request, "my_canteen/review_edit.html", {"item": item, "form": form})
+
+
+@login_required
+def delete_review(request, item_id):
+    item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+    review = get_object_or_404(Review, item=item, user=request.user)
+
+    if request.method == "POST":
+        review.delete()
+        messages.success(request, "Your review has been deleted.")
+        return redirect("item_detail", item_id=item.id)
+
+    return HttpResponseForbidden("Invalid request")
 
 
 # ---------- Cart ----------
@@ -228,13 +259,10 @@ def orders_page(request):
     profile = UserProfile.objects.get(user=request.user)
     role = get_role(request.user)
 
-    # Vendor & Admin: see ALL orders
     if role in ["vendor", "admin"]:
         orders = Order.objects.all().order_by("-created_at")
-    # Staff: see processing queue
     elif role == "staff":
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by("-created_at")
-    # Others: see own orders
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
 
@@ -251,12 +279,6 @@ def contact_page(request):
 
 # ---------- Signup ----------
 def signup_page(request):
-    """
-    Rule:
-    - প্রথম ইউজার => vendor (full power)
-    - অন্য সবাই => guest
-    - ফর্মের রোল ইনপুট ইগনোর করা হবে
-    """
     if request.method == 'POST':
         form = CustomSignupForm(request.POST)
         if form.is_valid():
@@ -264,15 +286,13 @@ def signup_page(request):
             user.email = form.cleaned_data.get('email')
             user.save()
 
-            # ignore any role from form; enforce rules
             is_first_user = (User.objects.count() == 1)
             role = 'vendor' if is_first_user else 'guest'
-            phone = form.cleaned_data.get('phone') if hasattr(form, 'cleaned_data') else None
+            phone = form.cleaned_data.get('phone')
 
-            profile = user.userprofile  # created by signal
+            profile = user.userprofile
             profile.role = role
-            if phone:
-                profile.phone = phone
+            profile.phone = phone
             profile.save()
 
             messages.success(request, "Account created successfully! Please login.")
@@ -302,13 +322,9 @@ def dashboard(request):
     return render(request, template_name, {"profile": profile, "orders": orders, "items": items})
 
 
-# ---------- Vendor Dashboard (uses superadmin.html) ----------
+# ---------- Vendor Dashboard ----------
 @login_required
 def vendor_dashboard(request):
-    """
-    Vendor পাবে superadmin-এর সব ফিচার।
-    টেমপ্লেট rename না করেও superadmin.html রেন্ডার করা হবে।
-    """
     if get_role(request.user) != 'vendor':
         messages.error(request, "Only vendor can access this dashboard.")
         return redirect('home')
