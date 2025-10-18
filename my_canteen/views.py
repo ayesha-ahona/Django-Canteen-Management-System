@@ -289,28 +289,43 @@ def contact_anchor(request):
 
 
 # ---------- Signup ----------
+from django.contrib import messages
+from .forms import CustomSignupForm
+from .models import UserProfile
+from django.contrib.auth.models import User
+from django.shortcuts import render, redirect
+
 def signup_page(request):
     if request.method == 'POST':
         form = CustomSignupForm(request.POST)
         if form.is_valid():
+            # ✅ User তৈরি
             user = form.save(commit=False)
             user.email = form.cleaned_data.get('email')
             user.save()
 
-            is_first_user = (User.objects.count() == 1)
-            role = 'vendor' if is_first_user else 'guest'
+            # ✅ form থেকে role এবং phone নেওয়া
+            role = form.cleaned_data.get('role', 'guest')
             phone = form.cleaned_data.get('phone')
 
+            # ✅ যদি প্রথম user হয়, admin করে দেবে
+            if User.objects.count() == 1:
+                role = 'admin'
+
+            # ✅ user profile update সঠিকভাবে
             profile = user.userprofile
-            profile.role = role
+            valid_roles = ['admin', 'student', 'faculty', 'staff', 'vendor', 'guest']
+            profile.role = role if role in valid_roles else 'guest'
             profile.phone = phone
             profile.save()
 
-            messages.success(request, "Account created successfully! Please login.")
+            messages.success(request, f"Account created successfully as {profile.role}! Please login.")
             return redirect('login')
     else:
         form = CustomSignupForm()
+
     return render(request, 'my_canteen/signup.html', {'form': form})
+
 
 
 # ---------- Dashboard ----------
