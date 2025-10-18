@@ -3,7 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q, Avg, Count
 from django.contrib import messages
-from django.http import HttpResponseForbidden
+from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.urls import reverse
 
 from .models import MenuItem, UserProfile, Order, OrderItem, Review
 from .forms import CustomSignupForm, ReviewForm
@@ -275,6 +276,16 @@ def about_page(request):
 
 def contact_page(request):
     return render(request, 'my_canteen/contact.html')
+
+
+# ---------- Anchor Redirects ----------
+def about_anchor(request):
+    # Redirects /about to /#about
+    return HttpResponseRedirect(f"{reverse('home')}#about")
+
+def contact_anchor(request):
+    # Redirects /contact to /#contact
+    return HttpResponseRedirect(f"{reverse('home')}#contact")
 
 
 # ---------- Signup ----------

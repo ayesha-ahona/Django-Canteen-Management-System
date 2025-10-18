@@ -12,56 +12,100 @@
     <nav class="navbar">
         <div class="logo">🍴 UAP CanteenX</div>
         <ul class="nav-links">
-            <li><a href="/">Home</a></li>
-            <li><a href="/menu/">Menu</a></li>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'menu' %}">Menu</a></li>
             <li>
-              <a href="/cart/">
+              <a href="{% url 'cart' %}">
                 Cart
-                {% if cart_count > 0 %}
-                  <span style="background:red;color:white;
-                               padding:2px 6px;
-                               border-radius:12px;
-                               font-size:12px;">
-                    {{ cart_count }}
-                  </span>
-                {% endif %}
+                {% with cart=request.session.cart %}
+                  {% if cart %}
+                    {% with cart_count=cart|length %}
+                      {% if cart_count > 0 %}
+                        <span class="pill">{{ cart_count }}</span>
+                      {% endif %}
+                    {% endwith %}
+                  {% endif %}
+                {% endwith %}
               </a>
             </li>
-            <li><a href="/orders/">Orders</a></li>
-            <li><a href="/about/">About</a></li>
-            <li><a href="/contact/">Contact</a></li>
+            <li><a href="{% url 'orders' %}">Orders</a></li>
+
+            <!-- এই দুইটা লিংক পাতাকে বদলায় না—home-এর anchor-এ redirect হবে -->
+            <li><a href="{% url 'about' %}">About</a></li>
+            <li><a href="{% url 'contact' %}">Contact</a></li>
 
             {% if user.is_authenticated %}
-                <li><a href="/dashboard/">Dashboard</a></li>
+                <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
                 <li>
-                    <form action="/logout/" method="post" style="display:inline;">
+                    <form action="{% url 'logout' %}" method="post" style="display:inline;">
                         {% csrf_token %}
-                        <button type="submit" 
-                                style="background:none;
-                                       border:none;
-                                       color:white;
-                                       font-weight:bold;
-                                       cursor:pointer;">
-                            Logout
-                        </button>
+                        <button type="submit" class="link-like">Logout</button>
                     </form>
                 </li>
             {% else %}
-                <li><a href="/login/">Login</a></li>
-                <li><a href="/signup/">Signup</a></li>
+                <li><a href="{% url 'login' %}">Login</a></li>
+                <li><a href="{% url 'signup' %}">Signup</a></li>
             {% endif %}
         </ul>
     </nav>
 
     <!-- Main Content -->
     <main class="container">
-        {% block content %}
-        {% endblock %}
+        {% block content %}{% endblock %}
     </main>
 
-    <!-- Footer -->
-    <footer>
-        <p>© 2025 UAP CanteenX | Powered by Django</p>
+    <!-- Footer: শুধু home পেজে দেখাবে -->
+    {% if request.resolver_match.url_name == 'home' %}
+    <footer class="site-footer">
+        <div class="footer-grid">
+            <!-- About -->
+            <section class="footer-card" id="about">
+                <h3>About CanteenX</h3>
+                <p>UAP CanteenX — campus-এর সেরা খাবার, ফাস্ট সার্ভিস, আর স্মার্ট অর্ডারিং। 
+                   প্রতিদিন fresh items, combo deals এবং budget-friendly মেনু।</p>
+                <ul class="about-points">
+                    <li>✅ Healthy & Hygienic</li>
+                    <li>⏱ Fast Delivery to counters</li>
+                    <li>⭐ Student-friendly pricing</li>
+                </ul>
+            </section>
+
+            <!-- Contact -->
+            <section class="footer-card" id="contact">
+                <h3>Contact</h3>
+                <ul class="contact-list">
+                    <li>📍 UAP Campus, Dhaka</li>
+                    <li>📞 +880 1304-092657</li>
+                    <li>✉️ support@canteenx.example</li>
+                </ul>
+                <form class="mini-contact" method="post" action="#">
+                    <input type="text" placeholder="Your name" required>
+                    <input type="email" placeholder="Your email" required>
+                    <textarea rows="3" placeholder="Message"></textarea>
+                    <button type="submit" class="btn">Send</button>
+                </form>
+            </section>
+
+            <!-- Quick Links -->
+            <section class="footer-card">
+                <h3>Quick Links</h3>
+                <ul class="quick-links">
+                    <li><a href="{% url 'menu' %}">Browse Menu</a></li>
+                    <li><a href="{% url 'orders' %}">Your Orders</a></li>
+                    <li><a href="{% url 'login' %}">Login</a> / <a href="{% url 'signup' %}">Signup</a></li>
+                </ul>
+            </section>
+        </div>
+
+        <div class="footer-bottom">
+            <span>© {{ now|date:"Y" }} UAP CanteenX • All rights reserved.</span>
+            <nav class="footer-nav">
+                <a href="{% url 'about' %}">About</a>
+                <a href="{% url 'contact' %}">Contact</a>
+                <a href="{% url 'menu' %}">Menu</a>
+            </nav>
+        </div>
     </footer>
+    {% endif %}
 </body>
 </html>

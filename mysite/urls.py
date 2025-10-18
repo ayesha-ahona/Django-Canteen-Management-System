@@ -41,9 +41,9 @@ urlpatterns = [
     path('orders/<int:order_id>/cancel/', views.order_cancel, name='order_cancel'),
     path('orders/<int:order_id>/paid/', views.order_mark_paid, name='order_mark_paid'),
 
-    # Static pages
-    path('about/', views.about_page, name='about'),
-    path('contact/', views.contact_page, name='contact'),
+    # About/Contact -> home anchors
+    path('about/', views.about_anchor, name='about'),
+    path('contact/', views.contact_anchor, name='contact'),
 
     # Auth
     path('signup/', views.signup_page, name='signup'),
