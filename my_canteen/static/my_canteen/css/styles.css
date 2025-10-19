@@ -41,6 +41,25 @@ body {
     text-decoration: underline;
 }
 
+/* Navbar logout button reset */
+.link-like {
+    background: none;
+    border: none;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Small pill on Cart */
+.pill {
+    background: #ff5252;
+    color: #fff;
+    padding: 2px 6px;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 4px;
+}
+
 /* ---------- Page Container ---------- */
 .container {
     padding: 20px;
@@ -96,6 +115,7 @@ body {
     padding: 15px;
     text-align: center;
     transition: transform 0.2s;
+    position: relative;
 }
 
 .card:hover {
@@ -110,17 +130,28 @@ body {
     margin-bottom: 10px;
 }
 
-.card h3 {
-    margin: 10px 0 5px;
-    font-size: 18px;
-    color: #333;
+/* ---------- Badges ---------- */
+.card-media {
+    position: relative;
 }
 
-.card p {
-    font-size: 14px;
-    color: #666;
+.badge {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    background: #ff9800;
+    color: #fff;
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-weight: 700;
 }
 
+.badge-red {
+    background: #e53935;
+}
+
+/* ---------- Buttons ---------- */
 .card button {
     margin-top: 10px;
     padding: 8px 14px;
@@ -146,6 +177,7 @@ body {
 }
 
 .search-filter-form input,
+.search-filter-form select,
 .search-filter-form button {
     padding: 8px;
     border-radius: 6px;
@@ -163,6 +195,41 @@ body {
 
 .search-filter-form button:hover {
     background: #b71c1c;
+}
+
+/* ---------- Category Chips ---------- */
+.chip-row {
+    display: flex;
+    gap: 10px;
+    overflow-x: auto;
+    padding: 6px 2px 12px;
+    scrollbar-width: none;
+}
+
+.chip-row::-webkit-scrollbar {
+    display: none;
+}
+
+.chip {
+    white-space: nowrap;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #f0f0f0;
+    color: #333;
+    text-decoration: none;
+    font-weight: 600;
+    border: 1px solid #e5e5e5;
+    transition: .2s;
+}
+
+.chip:hover {
+    background: #e7e7e7;
+}
+
+.chip.active {
+    background: #d32f2f;
+    color: #fff;
+    border-color: #d32f2f;
 }
 
 /* ---------- Orders Table ---------- */
@@ -187,16 +254,28 @@ body {
     color: white;
 }
 
-/* ---------- Status Styles ---------- */
+/* ---------- Status ---------- */
 .status {
     padding: 5px 10px;
     border-radius: 4px;
     font-weight: bold;
     text-transform: capitalize;
 }
-.status.processing { background: orange; color: white; }
-.status.completed { background: green; color: white; }
-.status.cancelled { background: red; color: white; }
+
+.status.processing {
+    background: orange;
+    color: white;
+}
+
+.status.completed {
+    background: green;
+    color: white;
+}
+
+.status.cancelled {
+    background: red;
+    color: white;
+}
 
 /* ---------- Dashboard Tabs ---------- */
 .dashboard-tabs {
@@ -223,7 +302,7 @@ body {
     transform: translateY(-2px);
 }
 
-/* ---------- Buttons ---------- */
+/* ---------- Generic Buttons ---------- */
 .btn {
     background: #d32f2f;
     color: white;
@@ -239,7 +318,7 @@ body {
     background: #b71c1c;
 }
 
-/* ---------- Profile ---------- */
+/* ---------- Profile & Settings ---------- */
 .profile-card {
     background: white;
     padding: 20px;
@@ -248,7 +327,6 @@ body {
     margin-bottom: 20px;
 }
 
-/* ---------- Settings ---------- */
 .settings-form {
     background: white;
     padding: 20px;
@@ -267,23 +345,18 @@ body {
     font-size: 14px;
 }
 
-/* ---------- Divider ---------- */
-.divider {
-    margin: 40px 0;
-    border: none;
-    border-top: 1px solid #eee;
+/* ---------- Recommended Section ---------- */
+.recommended {
+    margin-top: 40px;
 }
 
-/* ---------- Menu & Recommended ---------- */
-.rating {
-    font-size: 14px;
-    color: #777;
-    margin: 5px 0;
+.recommended h3 {
+    color: #d32f2f;
+    margin-bottom: 12px;
 }
 
-.out-of-stock {
-    color: red;
-    font-weight: bold;
+.recommended .card-grid {
+    margin-top: 15px;
 }
 
 /* ---------- Item Detail Page ---------- */
@@ -334,7 +407,7 @@ body {
     color: #444;
 }
 
-/* ---------- Feedback Section ---------- */
+/* ---------- Review / Feedback ---------- */
 .feedback-section {
     background: white;
     padding: 25px;
@@ -390,19 +463,148 @@ body {
     padding: 10px 16px;
 }
 
+/* ---------- Footer (Home-only) ---------- */
+.site-footer {
+    background: #111;
+    color: #ddd;
+    margin-top: 40px;
+    padding: 36px 0 12px;
+}
+
+.footer-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 20px;
+}
+
+.footer-card {
+    background: #151515;
+    border: 1px solid #222;
+    border-radius: 12px;
+    padding: 18px 16px;
+}
+
+.footer-card h3 {
+    margin: 0 0 10px;
+    color: #fff;
+    font-size: 18px;
+    letter-spacing: .2px;
+}
+
+.footer-card p {
+    margin: 0 0 10px;
+    color: #cfcfcf;
+}
+
+.about-points {
+    margin: 10px 0 0;
+    padding-left: 16px;
+}
+
+.about-points li {
+    margin: 4px 0;
+}
+
+.contact-list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 12px;
+}
+
+.contact-list li {
+    margin: 6px 0;
+    color: #e0e0e0;
+}
+
+.mini-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.mini-contact input,
+.mini-contact textarea {
+    width: 100%;
+    padding: 9px 10px;
+    border-radius: 8px;
+    border: 1px solid #2b2b2b;
+    background: #0e0e0e;
+    color: #eee;
+}
+
+.mini-contact .btn {
+    align-self: flex-start;
+    background: #d32f2f;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 14px;
+    cursor: pointer;
+}
+
+.mini-contact .btn:hover {
+    background: #b71c1c;
+}
+
+.quick-links {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.quick-links li {
+    margin: 6px 0;
+}
+
+.quick-links a {
+    color: #fff;
+    text-decoration: none;
+}
+
+.quick-links a:hover {
+    text-decoration: underline;
+}
+
+.footer-bottom {
+    max-width: 1200px;
+    margin: 18px auto 0;
+    padding: 12px 20px;
+    border-top: 1px solid #222;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.footer-nav a {
+    color: #bbb;
+    margin-left: 12px;
+    text-decoration: none;
+}
+
+.footer-nav a:hover {
+    color: #fff;
+    text-decoration: underline;
+}
+
+/* ---------- Responsive ---------- */
 @media (max-width: 768px) {
     .item-detail-container {
         flex-direction: column;
         align-items: center;
         text-align: center;
     }
-
+    
     .item-image img {
         width: 100%;
         max-width: 450px;
         height: auto;
     }
-
+    
     .item-info {
         width: 100%;
     }

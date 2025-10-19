@@ -1,80 +1,114 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
 
-<h2>🍽️ Recommended for You</h2>
-{% if recommended_items %}
-<div class="card-grid">
-    {% for item in recommended_items %}
-    <div class="card">
-        <a href="{% url 'item_detail' item.id %}">
-            {% if item.image %}
-                <img src="{{ item.image.url }}" alt="{{ item.name }}">
-            {% else %}
-                <img src="https://via.placeholder.com/200" alt="No Image">
-            {% endif %}
-        </a>
-        <h3>
-            <a href="{% url 'item_detail' item.id %}" class="item-link">
-                {{ item.name }}
-            </a>
-        </h3>
-        <p class="price"><strong>{{ item.price }} Tk</strong></p>
-        <p class="rating">⭐ {{ item.avg_rating|default:0|floatformat:1 }} ({{ item.review_count }} reviews)</p>
+<h2>🍽️ Our Menu</h2>
 
-        {% if item.stock > 0 %}
-            <a href="{% url 'add_to_cart' item.id %}">
-                <button>Add to Cart</button>
-            </a>
-        {% else %}
-            <p class="out-of-stock">Out of Stock</p>
-        {% endif %}
-    </div>
-    {% endfor %}
-</div>
-{% else %}
-<p>No personalized recommendations yet. Order something to get tailored suggestions!</p>
-{% endif %}
-
-<hr class="divider">
-
-<h2>🍔 All Menu Items</h2>
-
+<!-- 🔎 Search + Filters -->
 <form method="get" class="search-filter-form">
-    <input type="text" name="q" placeholder="Search food..." value="{{ request.GET.q }}">
-    <input type="number" name="min_price" placeholder="Min Price" value="{{ request.GET.min_price }}">
-    <input type="number" name="max_price" placeholder="Max Price" value="{{ request.GET.max_price }}">
-    <button type="submit">Search</button>
+  <input type="text" name="q" placeholder="Search food..." value="{{ q }}">
+  <input type="number" name="min_price" placeholder="Min Price" value="{{ min_price }}">
+  <input type="number" name="max_price" placeholder="Max Price" value="{{ max_price }}">
+  <select name="sort">
+    <option value="">Sort</option>
+    <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>Price Low → High</option>
+    <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>Price High → Low</option>
+  </select>
+  {% if active_cat %}
+    <input type="hidden" name="cat" value="{{ active_cat }}">
+  {% endif %}
+  <button type="submit">Apply</button>
 </form>
 
-<div class="card-grid">
-    {% for item in items %}
-    <div class="card">
-        <a href="{% url 'item_detail' item.id %}">
-            {% if item.image %}
-                <img src="{{ item.image.url }}" alt="{{ item.name }}">
-            {% else %}
-                <img src="https://via.placeholder.com/200" alt="No Image">
-            {% endif %}
-        </a>
-        <h3>
-            <a href="{% url 'item_detail' item.id %}" class="item-link">
-                {{ item.name }}
-            </a>
-        </h3>
-        <p class="price"><strong>{{ item.price }} Tk</strong></p>
-        <p class="rating">⭐ {{ item.avg_rating|default:0|floatformat:1 }} ({{ item.review_count }} reviews)</p>
+<!-- 🧭 Category Chips -->
+<div class="chip-row">
+  <a
+    href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if min_price %}min_price={{ min_price }}&{% endif %}{% if max_price %}max_price={{ max_price }}&{% endif %}{% if sort %}sort={{ sort }}{% endif %}"
+    class="chip {% if not active_cat %}active{% endif %}"
+  >All</a>
 
-        {% if item.stock > 0 %}
-            <a href="{% url 'add_to_cart' item.id %}">
-                <button>Add to Cart</button>
-            </a>
-        {% else %}
-            <p class="out-of-stock">Out of Stock</p>
-        {% endif %}
-    </div>
-    {% empty %}
-        <p>No items found.</p>
-    {% endfor %}
+  {% for cat in categories %}
+    <a
+      href="?cat={{ cat.id }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}"
+      class="chip {% if active_cat == cat.id|stringformat:'s' %}active{% endif %}"
+    >{{ cat.name }}</a>
+  {% endfor %}
 </div>
+
+<!-- 🧾 Items Grid -->
+<div class="card-grid">
+  {% for item in items %}
+    <div class="card">
+      <a class="card-media" href="{% url 'item_detail' item.id %}">
+        {% if item.image %}
+          <img src="{{ item.image.url }}" alt="{{ item.name }}">
+        {% else %}
+          <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
+        {% endif %}
+        {% if item.is_popular %}
+          <span class="badge">Popular</span>
+        {% endif %}
+        {% if item.stock <= 0 %}
+          <span class="badge badge-red">Out</span>
+        {% endif %}
+      </a>
+
+      <a class="card-title" href="{% url 'item_detail' item.id %}">{{ item.name }}</a>
+
+      <div class="card-meta">
+        <span class="price"><strong>{{ item.price }} Tk</strong></span>
+        {% if item.rating_avg or item.rating_count %}
+          <span class="stars" title="{{ item.rating_avg|default:0 }}/5">
+            {% for i in "12345" %}
+              {% if item.rating_avg and forloop.counter <= item.rating_avg|floatformat:0 %}
+                <span class="star filled">★</span>
+              {% else %}
+                <span class="star">☆</span>
+              {% endif %}
+            {% endfor %}
+            {% if item.rating_avg %}<span class="avg">{{ item.rating_avg|floatformat:1 }}</span>{% endif %}
+            {% if item.rating_count %}<span class="count">({{ item.rating_count }})</span>{% endif %}
+          </span>
+        {% endif %}
+      </div>
+
+      {% if item.stock > 0 %}
+        <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
+      {% else %}
+        <p class="out-of-stock">Out of Stock</p>
+      {% endif %}
+    </div>
+  {% empty %}
+    <p>No food items found.</p>
+  {% endfor %}
+</div>
+
+{% if recommended %}
+  <hr class="divider">
+  <div class="recommended">
+    <h3>⭐ Recommended For You</h3>
+    <div class="card-grid">
+      {% for item in recommended %}
+        <div class="card">
+          <a class="card-media" href="{% url 'item_detail' item.id %}">
+            {% if item.image %}
+              <img src="{{ item.image.url }}" alt="{{ item.name }}">
+            {% else %}
+              <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
+            {% endif %}
+          </a>
+          <a class="card-title" href="{% url 'item_detail' item.id %}">{{ item.name }}</a>
+          <div class="card-meta">
+            <span class="price"><strong>{{ item.price }} Tk</strong></span>
+          </div>
+          {% if item.stock > 0 %}
+            <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
+          {% else %}
+            <p class="out-of-stock">Out of Stock</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}
 
 {% endblock %}
