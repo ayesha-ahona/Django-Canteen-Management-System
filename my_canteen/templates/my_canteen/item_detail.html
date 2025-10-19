@@ -1,90 +1,103 @@
 {% extends "my_canteen/base.html" %}
+{% load static %}
 {% block content %}
+<div class="container my-5">
 
-<div class="item-detail-container">
-  <div class="item-image">
-    {% if item.image %}
-      <img src="{{ item.image.url }}" alt="{{ item.name }}">
-    {% else %}
-      <img src="https://via.placeholder.com/400x250" alt="Food">
-    {% endif %}
-  </div>
+    <!-- Item Info -->
+    <div class="row">
+        <div class="col-md-5">
+            {% if item.image %}
+                <img src="{{ item.image.url }}" class="img-fluid rounded shadow" alt="{{ item.name }}">
+            {% endif %}
+        </div>
+        <div class="col-md-7">
+            <h2>{{ item.name }}</h2>
+            <p class="text-muted">{{ item.description }}</p>
+            <p><strong>Price:</strong> ৳{{ item.price }}</p>
 
-  <div class="item-info">
-    <h2>{{ item.name }}</h2>
-    <div class="item-price">{{ item.price }} Tk</div>
+            <p>
+                ⭐ <strong>{{ avg_rating }}</strong> / 5  
+                <small>({{ total_reviews }} reviews)</small>
+            </p>
 
-    <div class="item-rating">
-      <span class="stars" title="{{ avg_rating }}/5">
-        {% for i in "12345" %}
-          {% if forloop.counter <= avg_rating|floatformat:0 %}
-            <span class="star filled">★</span>
-          {% else %}
-            <span class="star">☆</span>
-          {% endif %}
-        {% endfor %}
-      </span>
-      <span class="avg">{{ avg_rating }}/5</span>
-      <span class="count">({{ total_reviews }} reviews)</span>
+            <form method="post" action="{% url 'add_to_cart' item.id %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">🛒 Add to Cart</button>
+            </form>
+        </div>
     </div>
 
-    <div class="item-description">{{ item.description }}</div>
+    <hr>
 
-    {% if item.stock > 0 %}
-      <a href="{% url 'add_to_cart' item.id %}" class="btn">Add to Cart</a>
-    {% else %}
-      <p class="out-of-stock">Out of Stock</p>
-    {% endif %}
-  </div>
-</div>
+    <!-- Reviews Section -->
+    <div class="mt-5">
+        <h4>Customer Feedback</h4>
 
-<div class="feedback-section">
-  <h3>Customer Feedback</h3>
+        {% if reviews %}
+            {% for review in reviews %}
+                <div class="border p-3 mb-3 rounded">
+                    <strong>{{ review.user.username }}</strong> rated
+                    <span class="text-warning">
+                        {% for i in "12345" %}
+                            {% if i|add:"0"|floatformat:0 <= review.rating %}
+                                ★
+                            {% else %}
+                                ☆
+                            {% endif %}
+                        {% endfor %}
+                    </span>
+                    <p>{{ review.comment }}</p>
+                    <small class="text-muted">{{ review.created_at|date:"F j, Y, g:i a" }}</small>
 
-  {% if reviews %}
-    {% for r in reviews %}
-      <div class="review-card">
-        <div class="review-head">
-          <strong>{{ r.user.username }}</strong>
-          <span class="review-stars">
-            {% for i in "12345" %}
-              {% if forloop.counter <= r.rating %}<span class="star filled">★</span>
-              {% else %}<span class="star">☆</span>{% endif %}
+                    {% if review.user == request.user %}
+                        <div class="mt-2">
+                            <a href="{% url 'edit_review' item.id %}" class="btn btn-sm btn-outline-warning">Edit</a>
+                            <form action="{% url 'delete_review' item.id %}" method="POST" style="display:inline;">
+                                {% csrf_token %}
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
             {% endfor %}
-          </span>
-          <span class="review-date">{{ r.created_at|date:"M d, Y h:i A" }}</span>
-        </div>
-        {% if r.comment %}<p class="review-text">{{ r.comment }}</p>{% endif %}
-      </div>
-    {% endfor %}
-  {% else %}
-    <p class="muted">No reviews yet. Be the first to review!</p>
-  {% endif %}
+        {% else %}
+            <p class="text-muted">No reviews yet. Be the first to share your feedback!</p>
+        {% endif %}
+    </div>
 
-  {% if user.is_authenticated %}
-    {% if can_review %}
-      <hr class="divider">
-      <form method="post" action="{% url 'submit_review' item.id %}" class="review-form card">
-        {% csrf_token %}
-        <div class="stars-input">{{ form.rating }}</div>
-        <div class="textarea">{{ form.comment }}</div>
-        <button class="btn btn-primary" type="submit">Submit Review</button>
-      </form>
-    {% elif already %}
-      <div class="note">
-        You already reviewed this item.
-        <a class="link" href="{% url 'edit_review' item.id %}">Edit</a>
-        <form method="post" action="{% url 'delete_review' item.id %}" class="inline">
-          {% csrf_token %}
-          <button type="submit" class="link link--danger">Delete</button>
-        </form>
-      </div>
-    {% else %}
-      <div class="note">You can review after your order is delivered.</div>
-    {% endif %}
-  {% else %}
-    <div class="note">Please <a href="{% url 'login' %}?next={{ request.path }}">login</a> to review.</div>
-  {% endif %}
+    <hr>
+
+    <!-- Write Review Section -->
+    <div class="mt-4">
+        {% if user.is_authenticated %}
+            {% if can_review %}
+                <h5>Write Your Review</h5>
+                <form method="POST" action="{% url 'submit_review' item.id %}">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="rating" class="form-label">Your Rating (1-5)</label>
+                        <select name="rating" id="rating" class="form-select" required>
+                            <option value="">Select</option>
+                            {% for i in "12345" %}
+                                <option value="{{ i }}">{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="comment" class="form-label">Your Feedback</label>
+                        <textarea name="comment" id="comment" rows="3" class="form-control" placeholder="Write your thoughts..." required></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Submit Review</button>
+                </form>
+            {% elif already %}
+                <p class="text-info">You already reviewed this item.</p>
+            {% else %}
+                <p class="text-muted">You can review this item after purchasing it.</p>
+            {% endif %}
+        {% else %}
+            <p class="text-muted">Please <a href="{% url 'login' %}">login</a> to give a review.</p>
+        {% endif %}
+    </div>
+
 </div>
-
 {% endblock %}
