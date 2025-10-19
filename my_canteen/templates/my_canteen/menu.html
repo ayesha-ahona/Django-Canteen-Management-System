@@ -47,7 +47,7 @@
 
       <div class="card-details">
         <a class="product-name" href="{% url 'item_detail' item.id %}">{{ item.name }}</a>
-        <p class="price">৳{{ item.price }}</p>
+        <p class="price">{{ item.price }} Tk</p>
 
         <div class="rating" title="Rating">
           {% if item.rating_avg %}
