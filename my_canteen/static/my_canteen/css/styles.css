@@ -116,6 +116,8 @@ body {
     text-align: center;
     transition: transform 0.2s;
     position: relative;
+    display: flex;
+    flex-direction: column;
 }
 
 .card:hover {
@@ -129,6 +131,42 @@ body {
     border-radius: 6px;
     margin-bottom: 10px;
 }
+
+/* --- নতুন যুক্ত করা হয়েছে --- */
+.card-details {
+    margin-top: auto; /* Pushes details to the bottom */
+}
+
+.product-name {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+    text-decoration: none;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.price {
+    font-size: 18px;
+    font-weight: bold;
+    color: #d32f2f;
+    margin: 0;
+}
+
+.rating {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5px;
+    margin-top: 5px;
+    font-size: 14px;
+    color: #777;
+}
+
+.stars {
+    color: #ffc107;
+}
+
 
 /* ---------- Badges ---------- */
 .card-media {
