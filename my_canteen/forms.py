@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Review
+from .models import Review, Payment
 
 
 # -----------------------------
@@ -13,14 +13,12 @@ class CustomSignupForm(UserCreationForm):
     email = forms.EmailField(required=True, label="Email")
     phone = forms.CharField(max_length=15, required=False, label="Phone")
 
-    # Signup-এ যে রোলগুলো সিলেক্ট করা যাবে
     ROLE_CHOICES = [
         ('student', 'Student'),
         ('faculty', 'Faculty'),
         ('staff', 'Staff'),
         ('guest', 'Visitor / Guest'),
         ('vendor', 'Vendor / Supplier'),
-        # admin কে ফর্ম থেকে selectable করা হয়নি (প্রয়োজনে view প্রথম ইউজারকে admin করবে)
     ]
     role = forms.ChoiceField(choices=ROLE_CHOICES, required=True, label="Role")
 
@@ -28,7 +26,6 @@ class CustomSignupForm(UserCreationForm):
         model = User
         fields = ["username", "email", "phone", "role", "password1", "password2"]
 
-    # একটু সুন্দর ইনপুট UI (class/placeholder)
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         placeholders = {
@@ -44,19 +41,16 @@ class CustomSignupForm(UserCreationForm):
             if name in placeholders:
                 field.widget.attrs["placeholder"] = placeholders[name]
 
-        # ছোট help text clean-up
         self.fields["username"].help_text = ""
         self.fields["password1"].help_text = ""
         self.fields["password2"].help_text = ""
 
-    # ইমেইল unique থাকা উচিত
     def clean_email(self):
         email = self.cleaned_data.get("email", "").strip().lower()
         if User.objects.filter(email__iexact=email).exists():
             raise ValidationError("This email is already registered.")
         return email
 
-    # ইউজারনেম একটু normalize
     def clean_username(self):
         username = self.cleaned_data.get("username", "").strip()
         if " " in username:
@@ -81,9 +75,21 @@ class ReviewForm(forms.ModelForm):
             ),
         }
 
-    # সেফগার্ড—1..5 এর বাইরে গেলে আটকাবে
     def clean_rating(self):
         rating = int(self.cleaned_data.get("rating"))
         if rating < 1 or rating > 5:
             raise ValidationError("Rating must be between 1 and 5.")
         return rating
+
+
+# -----------------------------
+# Checkout Payment Form
+# -----------------------------
+class CheckoutPaymentForm(forms.Form):
+    payment_method = forms.ChoiceField(
+        choices=Payment.METHOD_CHOICES,
+        widget=forms.RadioSelect,
+        label="Select Payment Method"
+    )
+    card_number = forms.CharField(required=False, max_length=16, label="Mock Card Number")
+    card_cvc = forms.CharField(required=False, max_length=4, label="CVC")

@@ -3,11 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q, Avg, Count
 from django.contrib import messages
-from django.http import HttpResponseForbidden, HttpResponseRedirect
+from django.http import HttpResponseForbidden, HttpResponseRedirect, JsonResponse, HttpResponse
 from django.urls import reverse
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt
+from django.conf import settings
 
-from .models import MenuItem, UserProfile, Order, OrderItem, Review
-from .forms import CustomSignupForm, ReviewForm
+from .models import MenuItem, UserProfile, Order, OrderItem, Review, Payment
+from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm
 
 
 # ---------- Helpers ----------
@@ -215,43 +218,203 @@ def view_cart(request):
     return render(request, "my_canteen/cart.html", {"items": items, "total": total})
 
 
-# ---------- Checkout ----------
+# ---------- Checkout with Payment ----------
 @login_required
 def checkout(request):
+    """
+    Updated checkout: handles payment method selection and payment processing
+    """
     cart = request.session.get("cart", {})
     if not cart:
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
 
-    order = Order.objects.create(
-        user=request.user,
-        total_price=0,
-        address="Default Address",
-        status='pending',
-        payment_status='unpaid',
-        payment_method='cash'
-    )
-
+    # Calculate cart total
     total = 0
+    cart_items = []
     for item_id, qty in cart.items():
-        item = get_object_or_404(MenuItem, id=item_id)
-        if item.stock < qty:
-            messages.error(request, f"{item.name} is out of stock!")
-            order.delete()
-            return redirect("cart")
+        try:
+            item = MenuItem.objects.get(id=item_id, is_active=True)
+            if item.stock < qty:
+                messages.error(request, f"{item.name} is out of stock!")
+                return redirect("cart")
+            subtotal = float(item.price) * qty
+            cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
+            total += subtotal
+        except MenuItem.DoesNotExist:
+            continue
 
-        item.stock -= qty
-        item.save()
+    if request.method == 'POST':
+        form = CheckoutPaymentForm(request.POST)
+        if form.is_valid():
+            method = form.cleaned_data['payment_method']
 
-        OrderItem.objects.create(order=order, item=item, quantity=qty, unit_price=item.price)
-        total += float(item.price) * qty
+            # Create order
+            order = Order.objects.create(
+                user=request.user,
+                total_price=total,
+                address="Default Address",
+                status='pending',
+                payment_status='unpaid',
+                payment_method=method
+            )
 
-    order.total_price = total
-    order.save()
+            # Create order items and update stock
+            for item_id, qty in cart.items():
+                item = get_object_or_404(MenuItem, id=item_id)
+                item.stock -= qty
+                item.save()
+                OrderItem.objects.create(
+                    order=order, 
+                    item=item, 
+                    quantity=qty, 
+                    unit_price=item.price
+                )
 
-    request.session["cart"] = {}
-    messages.success(request, f"Order placed successfully! Total: {total} Tk (status: Pending)")
-    return redirect("orders")
+            # Create payment record
+            payment = Payment.objects.create(
+                order=order,
+                method=method,
+                amount=order.total_price,
+                status='pending'
+            )
+
+            # Handle payment based on method
+            if method == 'cash':
+                payment.status = 'paid'
+                payment.paid_at = timezone.now()
+                payment.transaction_id = f"CASH-{order.id}-{int(timezone.now().timestamp())}"
+                payment.save()
+                
+                order.payment_status = 'paid'
+                order.save()
+
+                request.session["cart"] = {}
+                messages.success(request, f"Order placed successfully! Total: {total} Tk (Cash on Delivery)")
+                return redirect('payment_success')
+
+            elif method == 'mock_card':
+                card_number = form.cleaned_data.get('card_number')
+                card_cvc = form.cleaned_data.get('card_cvc')
+                
+                if card_number and card_cvc:
+                    payment.status = 'paid'
+                    payment.paid_at = timezone.now()
+                    payment.transaction_id = f"MOCK-{order.id}-{int(timezone.now().timestamp())}"
+                    payment.save()
+                    
+                    order.payment_status = 'paid'
+                    order.save()
+
+                    request.session["cart"] = {}
+                    messages.success(request, f"Payment successful! Order #{order.id}")
+                    return redirect('payment_success')
+                else:
+                    payment.status = 'failed'
+                    payment.save()
+                    messages.error(request, "Card payment failed. Please try again.")
+                    return redirect('payment_failed')
+
+            # For Stripe/SSLCommerz, redirect to payment gateway
+            request.session["cart"] = {}
+            return redirect('payment_start', order_id=order.id)
+    else:
+        form = CheckoutPaymentForm()
+
+    context = {
+        'items': cart_items,
+        'total': total,
+        'form': form
+    }
+    return render(request, 'my_canteen/checkout.html', context)
+
+
+def payment_start(request, order_id):
+    """
+    Initialize payment gateway (Stripe/SSLCommerz)
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    payment = order.payment
+    domain = request.build_absolute_uri('/')[:-1]
+
+    if payment.method == 'stripe':
+        try:
+            import stripe
+            stripe.api_key = settings.STRIPE_SECRET_KEY
+            session = stripe.checkout.Session.create(
+                mode="payment",
+                payment_method_types=["card"],
+                line_items=[{
+                    "price_data": {
+                        "currency": "usd",
+                        "product_data": {"name": f"Canteen Order #{order.id}"},
+                        "unit_amount": int(order.total_price * 100),
+                    },
+                    "quantity": 1,
+                }],
+                success_url=f"{domain}{reverse('payment_success')}",
+                cancel_url=f"{domain}{reverse('payment_failed')}",
+                client_reference_id=str(order.id),
+            )
+            payment.transaction_id = session.id
+            payment.save()
+            return redirect(session.url, code=303)
+        except Exception as e:
+            messages.error(request, f"Payment initialization failed: {str(e)}")
+            return redirect('payment_failed')
+
+    elif payment.method == 'sslcommerz':
+        # TODO: Implement SSLCommerz integration
+        messages.info(request, "SSLCommerz integration coming soon!")
+        return redirect('payment_failed')
+
+    return redirect('checkout')
+
+
+def payment_success(request):
+    """Payment success page"""
+    return render(request, 'my_canteen/payment_success.html')
+
+
+def payment_failed(request):
+    """Payment failed page"""
+    return render(request, 'my_canteen/payment_failed.html')
+
+
+@csrf_exempt
+def stripe_webhook(request):
+    """Handle Stripe webhook events"""
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+    
+    # TODO: Verify Stripe signature and process webhook
+    # Example: checkout.session.completed event
+    # Find Payment by session.id and mark as paid
+    
+    return HttpResponse(status=200)
+
+
+@csrf_exempt
+def sslcommerz_ipn(request):
+    """Handle SSLCommerz IPN callback"""
+    if request.method != 'POST':
+        return HttpResponse(status=405)
+    
+    # TODO: Verify SSLCommerz IPN and update payment status
+    
+    return HttpResponse(status=200)
+
+
+def order_status_api(request, order_id):
+    """API endpoint for real-time order status polling"""
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+    data = {
+        'order_id': order.id,
+        'payment_status': getattr(order.payment, 'status', 'missing'),
+        'transaction_id': getattr(order.payment, 'transaction_id', None),
+        'order_status': order.status,
+    }
+    return JsonResponse(data)
 
 
 # ---------- Orders ----------
@@ -280,39 +443,27 @@ def contact_page(request):
 
 # ---------- Anchor Redirects ----------
 def about_anchor(request):
-    # Redirects /about to /#about
     return HttpResponseRedirect(f"{reverse('home')}#about")
 
 def contact_anchor(request):
-    # Redirects /contact to /#contact
     return HttpResponseRedirect(f"{reverse('home')}#contact")
 
 
 # ---------- Signup ----------
-from django.contrib import messages
-from .forms import CustomSignupForm
-from .models import UserProfile
-from django.contrib.auth.models import User
-from django.shortcuts import render, redirect
-
 def signup_page(request):
     if request.method == 'POST':
         form = CustomSignupForm(request.POST)
         if form.is_valid():
-            # ✅ User তৈরি
             user = form.save(commit=False)
             user.email = form.cleaned_data.get('email')
             user.save()
 
-            # ✅ form থেকে role এবং phone নেওয়া
             role = form.cleaned_data.get('role', 'guest')
             phone = form.cleaned_data.get('phone')
 
-            # ✅ যদি প্রথম user হয়, admin করে দেবে
             if User.objects.count() == 1:
                 role = 'admin'
 
-            # ✅ user profile update সঠিকভাবে
             profile = user.userprofile
             valid_roles = ['admin', 'student', 'faculty', 'staff', 'vendor', 'guest']
             profile.role = role if role in valid_roles else 'guest'
@@ -325,7 +476,6 @@ def signup_page(request):
         form = CustomSignupForm()
 
     return render(request, 'my_canteen/signup.html', {'form': form})
-
 
 
 # ---------- Dashboard ----------
