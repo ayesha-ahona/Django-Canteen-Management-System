@@ -1,63 +1,15 @@
-<<<<<<< HEAD
-# ==============================
-# ✅ Django Project .gitignore
-# ==============================
-
-# ---- Python cache ----
-__pycache__/
-*.py[cod]
-*.pyc
-*.pyo
-*.pyd
-=======
 # --- OS generated files ---
 .DS_Store
 Thumbs.db
 
 # --- Logs ---
->>>>>>> 21fbaee83587ce0ee70bdfd1167345c0d3db49da
 *.log
-*.sqlite3-journal
 
-<<<<<<< HEAD
-# ---- Virtual Environment ----
-venv/
-env/
-ENV/
-.venv/
-.env
-*.env
-
-# ---- IDE / Editor settings ----
-.vscode/
-.idea/
-
-# ---- System files ----
-.DS_Store
-Thumbs.db
-
-# ---- Node / JS (if any JS used) ----
-node_modules/
-package-lock.json
-
-# ---- Migrations cache ----
-*/migrations/__pycache__/
-*/migrations/*.pyc
-
-# ✅ KEEP these files/folders (DO NOT IGNORE)
-!db.sqlite3
-!media/
-!static/
-!templates/
-!my_canteen/
-!manage.py
-=======
 # --- Virtual environment ---
 venv/
-__pycache__/
+_pycache_/
 *.py[cod]
 
 # --- IDE files ---
 .vscode/
 .idea/
->>>>>>> 21fbaee83587ce0ee70bdfd1167345c0d3db49da
