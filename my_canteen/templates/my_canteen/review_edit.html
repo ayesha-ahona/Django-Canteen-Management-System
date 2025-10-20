@@ -1,21 +1,68 @@
 {% extends "my_canteen/base.html" %}
+{% load static %}
 {% block content %}
-<section class="container container--narrow">
-  <h3>Edit your review — {{ item.name }}</h3>
 
-  <form method="post" class="card review-edit-form">
-    {% csrf_token %}
-    <div class="stars-input">
-      {{ form.rating }}
-    </div>
-    <div class="textarea">
-      {{ form.comment }}
-    </div>
+<section class="container my-5" style="max-width: 600px;">
+  <div class="card shadow-sm p-4 border-0">
+    <h3 class="mb-3 text-center">Edit Your Review — <span class="text-primary">{{ item.name }}</span></h3>
+    <hr>
 
-    <div class="actions">
-      <button class="btn btn-primary" type="submit">Update</button>
-      <a class="btn" href="{% url 'item_detail' item.id %}">Cancel</a>
-    </div>
-  </form>
+    <form method="post" class="review-edit-form">
+      {% csrf_token %}
+      
+      <!-- Rating -->
+      <div class="mb-3">
+        <label for="id_rating" class="form-label fw-semibold">Your Rating</label>
+        <div class="stars-input">
+          {{ form.rating }}
+        </div>
+      </div>
+
+      <!-- Comment -->
+      <div class="mb-3">
+        <label for="id_comment" class="form-label fw-semibold">Your Feedback</label>
+        {{ form.comment }}
+      </div>
+
+      <!-- Buttons -->
+      <div class="d-flex justify-content-between align-items-center mt-4">
+        <button class="btn btn-primary px-4" type="submit">💾 Update</button>
+        <a class="btn btn-outline-secondary px-4" href="{% url 'item_detail' item.id %}">Cancel</a>
+      </div>
+    </form>
+  </div>
 </section>
+
+<style>
+  .stars-input select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+  }
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+    min-height: 100px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    padding: 8px;
+  }
+
+  .btn-primary {
+    background-color: #007bff;
+    border: none;
+  }
+
+  .btn-primary:hover {
+    background-color: #0056b3;
+  }
+
+  .card {
+    border-radius: 16px;
+  }
+</style>
+
 {% endblock %}
+

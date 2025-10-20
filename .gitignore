@@ -7,9 +7,13 @@ Thumbs.db
 
 # --- Virtual environment ---
 venv/
-_pycache_/
+__pycache__/
 *.py[cod]
 
 # --- IDE files ---
 .vscode/
 .idea/
+
+# --- Django DB ---
+db.sqlite3
+*.sqlite3

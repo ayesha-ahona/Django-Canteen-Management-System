@@ -157,3 +157,4 @@ def review_saved(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Review)
 def review_deleted(sender, instance, **kwargs):
     _recalc_item_rating(instance.item)
+
