@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ==============================
 # ✅ Django Project .gitignore
 # ==============================
@@ -8,9 +9,17 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+=======
+# --- OS generated files ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+>>>>>>> 21fbaee83587ce0ee70bdfd1167345c0d3db49da
 *.log
 *.sqlite3-journal
 
+<<<<<<< HEAD
 # ---- Virtual Environment ----
 venv/
 env/
@@ -42,3 +51,13 @@ package-lock.json
 !templates/
 !my_canteen/
 !manage.py
+=======
+# --- Virtual environment ---
+venv/
+__pycache__/
+*.py[cod]
+
+# --- IDE files ---
+.vscode/
+.idea/
+>>>>>>> 21fbaee83587ce0ee70bdfd1167345c0d3db49da
