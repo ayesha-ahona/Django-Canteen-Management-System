@@ -1,14 +1,44 @@
-# Python cache files
+# ==============================
+# ✅ Django Project .gitignore
+# ==============================
+
+# ---- Python cache ----
 __pycache__/
+*.py[cod]
 *.pyc
 *.pyo
 *.pyd
-
-# Database
-*.sqlite3
-
-# Logs
 *.log
+*.sqlite3-journal
 
-# Virtual environment
+# ---- Virtual Environment ----
 venv/
+env/
+ENV/
+.venv/
+.env
+*.env
+
+# ---- IDE / Editor settings ----
+.vscode/
+.idea/
+
+# ---- System files ----
+.DS_Store
+Thumbs.db
+
+# ---- Node / JS (if any JS used) ----
+node_modules/
+package-lock.json
+
+# ---- Migrations cache ----
+*/migrations/__pycache__/
+*/migrations/*.pyc
+
+# ✅ KEEP these files/folders (DO NOT IGNORE)
+!db.sqlite3
+!media/
+!static/
+!templates/
+!my_canteen/
+!manage.py
