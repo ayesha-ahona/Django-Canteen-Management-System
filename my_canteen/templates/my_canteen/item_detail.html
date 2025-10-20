@@ -1,90 +1,134 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
 
+<style>
+    .rating-input {
+        display: flex;
+        flex-direction: row-reverse; /* স্টারগুলোকে ডান থেকে বামে সাজানো হয়েছে */
+        justify-content: flex-end;
+        gap: 4px;
+        margin-bottom: 15px;
+    }
+    .rating-input input[type="radio"] {
+        display: none; /* আসল রেডিও বাটন লুকিয়ে রাখা হয়েছে */
+    }
+    .rating-input label {
+        font-size: 28px;
+        color: #ddd;
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    /* হোভার করলে স্টার এবং তার আগের স্টারগুলো রঙিন হবে */
+    .rating-input:hover label,
+    .rating-input label:hover ~ label {
+        color: #ffc107;
+    }
+    /* সিলেক্ট করা স্টার এবং তার আগের স্টারগুলো রঙিন থাকবে */
+    .rating-input input[type="radio"]:checked ~ label {
+        color: #ffc107;
+    }
+</style>
+
 <div class="item-detail-container">
-  <div class="item-image">
-    {% if item.image %}
-      <img src="{{ item.image.url }}" alt="{{ item.name }}">
-    {% else %}
-      <img src="https://via.placeholder.com/400x250" alt="Food">
-    {% endif %}
-  </div>
-
-  <div class="item-info">
-    <h2>{{ item.name }}</h2>
-    <div class="item-price">{{ item.price }} Tk</div>
-
-    <div class="item-rating">
-      <span class="stars" title="{{ avg_rating }}/5">
-        {% for i in "12345" %}
-          {% if forloop.counter <= avg_rating|floatformat:0 %}
-            <span class="star filled">★</span>
-          {% else %}
-            <span class="star">☆</span>
-          {% endif %}
-        {% endfor %}
-      </span>
-      <span class="avg">{{ avg_rating }}/5</span>
-      <span class="count">({{ total_reviews }} reviews)</span>
+    <div class="item-image">
+        {% if item.image %}
+            <img src="{{ item.image.url }}" alt="{{ item.name }}">
+        {% else %}
+            <img src="https://via.placeholder.com/450x300.png?text=No+Image" alt="Default item image">
+        {% endif %}
     </div>
 
-    <div class="item-description">{{ item.description }}</div>
+    <div class="item-info">
+        <h2>{{ item.name }}</h2>
+        <p class="item-description">{{ item.description }}</p>
 
-    {% if item.stock > 0 %}
-      <a href="{% url 'add_to_cart' item.id %}" class="btn">Add to Cart</a>
-    {% else %}
-      <p class="out-of-stock">Out of Stock</p>
-    {% endif %}
-  </div>
+        <div class="price-rating-box">
+            <div class="item-price">৳{{ item.price }}</div>
+            <div class="item-rating">
+                <span class="stars" title="{{ avg_rating|floatformat:1 }}/5">
+                    {% with rating_floor=avg_rating|floatformat:0 %}
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= rating_floor %}
+                                <span class="star filled">★</span>
+                            {% else %}
+                                <span class="star">☆</span>
+                            {% endif %}
+                        {% endfor %}
+                    {% endwith %}
+                </span>
+                <span class="avg-text">
+                    <strong>{{ avg_rating|floatformat:1 }}</strong> / 5
+                </span>
+                <span class="review-count">({{ total_reviews }} reviews)</span>
+            </div>
+        </div>
+
+        {% if item.stock > 0 %}
+            <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary btn-lg">🛒 Add to Cart</a>
+        {% else %}
+            <p class="out-of-stock">⛔ Out of Stock</p>
+        {% endif %}
+    </div>
 </div>
 
 <div class="feedback-section">
-  <h3>Customer Feedback</h3>
+    <h3>Customer Feedback</h3>
 
-  {% if reviews %}
-    {% for r in reviews %}
-      <div class="review-card">
-        <div class="review-head">
-          <strong>{{ r.user.username }}</strong>
-          <span class="review-stars">
-            {% for i in "12345" %}
-              {% if forloop.counter <= r.rating %}<span class="star filled">★</span>
-              {% else %}<span class="star">☆</span>{% endif %}
-            {% endfor %}
-          </span>
-          <span class="review-date">{{ r.created_at|date:"M d, Y h:i A" }}</span>
-        </div>
-        {% if r.comment %}<p class="review-text">{{ r.comment }}</p>{% endif %}
-      </div>
-    {% endfor %}
-  {% else %}
-    <p class="muted">No reviews yet. Be the first to review!</p>
-  {% endif %}
-
-  {% if user.is_authenticated %}
-    {% if can_review %}
-      <hr class="divider">
-      <form method="post" action="{% url 'submit_review' item.id %}" class="review-form card">
-        {% csrf_token %}
-        <div class="stars-input">{{ form.rating }}</div>
-        <div class="textarea">{{ form.comment }}</div>
-        <button class="btn btn-primary" type="submit">Submit Review</button>
-      </form>
-    {% elif already %}
-      <div class="note">
-        You already reviewed this item.
-        <a class="link" href="{% url 'edit_review' item.id %}">Edit</a>
-        <form method="post" action="{% url 'delete_review' item.id %}" class="inline">
-          {% csrf_token %}
-          <button type="submit" class="link link--danger">Delete</button>
-        </form>
-      </div>
+    {% if reviews %}
+        {% for r in reviews %}
+            <div class="review-card">
+                <div class="review-head">
+                    <strong>{{ r.user.username }}</strong>
+                    <span class="review-stars">
+                        {% for i in "12345" %}
+                            {% if forloop.counter <= r.rating %}<span class="star filled">★</span>
+                            {% else %}<span class="star">☆</span>{% endif %}
+                        {% endfor %}
+                    </span>
+                    <span class="review-date">{{ r.created_at|date:"M d, Y" }}</span>
+                </div>
+                {% if r.comment %}<p class="review-text">{{ r.comment }}</p>{% endif %}
+            </div>
+        {% endfor %}
     {% else %}
-      <div class="note">You can review after your order is delivered.</div>
+        <p class="muted">No reviews yet. Be the first to share your feedback!</p>
     {% endif %}
-  {% else %}
-    <div class="note">Please <a href="{% url 'login' %}?next={{ request.path }}">login</a> to review.</div>
-  {% endif %}
+
+    {% if user.is_authenticated %}
+        {% if can_review %}
+            <hr class="divider">
+            <h4>Write Your Review</h4>
+            <form method="post" action="{% url 'submit_review' item.id %}" class="review-form card">
+                {% csrf_token %}
+                
+                <div class="rating-input">
+                    <input type="radio" id="star5" name="rating" value="5" required><label for="star5" title="5 stars">★</label>
+                    <input type="radio" id="star4" name="rating" value="4"><label for="star4" title="4 stars">★</label>
+                    <input type="radio" id="star3" name="rating" value="3"><label for="star3" title="3 stars">★</label>
+                    <input type="radio" id="star2" name="rating" value="2"><label for="star2" title="2 stars">★</label>
+                    <input type="radio" id="star1" name="rating" value="1"><label for="star1" title="1 star">★</label>
+                </div>
+                
+                {{ form.comment.errors }}
+                <textarea name="comment" class="form-control" placeholder="Share details of your own experience..." rows="4">{{ form.comment.value|default_if_none:'' }}</textarea>
+
+                <button class="btn btn-primary" type="submit">Submit Review</button>
+            </form>
+        {% elif already %}
+            <div class="note">
+                You have already reviewed this item.
+                <a class="link" href="{% url 'edit_review' item.id %}">Edit Your Review</a>
+                <form method="post" action="{% url 'delete_review' item.id %}" class="inline">
+                    {% csrf_token %}
+                    <button type="submit" class="link link--danger">Delete</button>
+                </form>
+            </div>
+        {% else %}
+            <div class="note">You can write a review after your order is successfully delivered.</div>
+        {% endif %}
+    {% else %}
+        <div class="note">Please <a href="{% url 'login' %}?next={{ request.path }}">login</a> to write a review.</div>
+    {% endif %}
 </div>
 
 {% endblock %}
