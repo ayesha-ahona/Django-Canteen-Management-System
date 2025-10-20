@@ -7,7 +7,7 @@ from .models import Review
 
 
 # -----------------------------
-# Custom Signup Form (কোনো পরিবর্তন করা হয়নি)
+# Custom Signup Form
 # -----------------------------
 class CustomSignupForm(UserCreationForm):
     email = forms.EmailField(required=True, label="Email")
@@ -20,6 +20,7 @@ class CustomSignupForm(UserCreationForm):
         ('staff', 'Staff'),
         ('guest', 'Visitor / Guest'),
         ('vendor', 'Vendor / Supplier'),
+        # admin কে ফর্ম থেকে selectable করা হয়নি (প্রয়োজনে view প্রথম ইউজারকে admin করবে)
     ]
     role = forms.ChoiceField(choices=ROLE_CHOICES, required=True, label="Role")
 
@@ -64,30 +65,25 @@ class CustomSignupForm(UserCreationForm):
 
 
 # -----------------------------
-# Review Form (এখানে পরিবর্তন করা হয়েছে)
+# Review Form
 # -----------------------------
 class ReviewForm(forms.ModelForm):
     class Meta:
         model = Review
         fields = ["rating", "comment"]
         widgets = {
-            # ✅ পরিবর্তন: স্টার রেটিং সিস্টেমের জন্য rating ফিল্ডকে hidden করা হয়েছে
-            "rating": forms.NumberInput(
-                attrs={
-                    'type': 'hidden',
-                    'id': 'rating_input' # জাভাস্ক্রিপ্ট দিয়ে টার্গেট করার জন্য আইডি
-                }
+            "rating": forms.Select(
+                attrs={"class": "form-control"},
+                choices=[(i, str(i)) for i in range(1, 6)],
             ),
             "comment": forms.Textarea(
                 attrs={"rows": 3, "placeholder": "Write your feedback...", "class": "form-control"}
             ),
         }
-    
-    # সেফগার্ড—1..5 এর বাইরে গেলে আটকাবে (এটি ঠিকই আছে)
+
+    # সেফগার্ড—1..5 এর বাইরে গেলে আটকাবে
     def clean_rating(self):
-        rating = self.cleaned_data.get("rating")
-        if rating is None:
-             raise ValidationError("Please provide a rating.")
-        if not 1 <= rating <= 5:
+        rating = int(self.cleaned_data.get("rating"))
+        if rating < 1 or rating > 5:
             raise ValidationError("Rating must be between 1 and 5.")
         return rating
