@@ -1,14 +1,15 @@
-# Python cache files
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
+# --- OS generated files ---
+.DS_Store
+Thumbs.db
 
-# Database
-*.sqlite3
-
-# Logs
+# --- Logs ---
 *.log
 
-# Virtual environment
+# --- Virtual environment ---
 venv/
+__pycache__/
+*.py[cod]
+
+# --- IDE files ---
+.vscode/
+.idea/
