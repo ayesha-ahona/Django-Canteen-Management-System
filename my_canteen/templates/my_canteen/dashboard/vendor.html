@@ -1,7 +1,7 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
 
-<h2>🏪 Vendor Dashboard</h2>
+<h2>{{ dashboard_title|default:"🏪 Vendor Dashboard" }}</h2>
 
 <div class="dashboard-tabs">
     <button class="tab-btn" onclick="showTab('deliveries')">📦 My Deliveries</button>
