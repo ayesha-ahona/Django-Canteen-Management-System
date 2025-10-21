@@ -41,6 +41,18 @@ urlpatterns = [
     path('orders/<int:order_id>/cancel/', views.order_cancel, name='order_cancel'),
     path('orders/<int:order_id>/paid/', views.order_mark_paid, name='order_mark_paid'),
 
+    # ===== Payment flow (NEW) =====
+    path('payment/start/<int:order_id>/', views.payment_start, name='payment_start'),
+    path('payment/success/', views.payment_success, name='payment_success'),
+    path('payment/failed/', views.payment_failed, name='payment_failed'),
+
+    # (optional) Gateways: webhook/IPN
+    path('webhook/stripe/', views.stripe_webhook, name='stripe_webhook'),
+    path('ipn/sslcommerz/', views.sslcommerz_ipn, name='sslcommerz_ipn'),
+
+    # (optional) Real-time status polling
+    path('orders/<int:order_id>/status/', views.order_status_api, name='order_status_api'),
+
     # About/Contact -> home anchors
     path('about/', views.about_anchor, name='about'),
     path('contact/', views.contact_anchor, name='contact'),
