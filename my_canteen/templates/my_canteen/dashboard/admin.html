@@ -1,6 +1,6 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h2>🛠️ Admin Dashboard</h2>
+<h2>{{ dashboard_title|default:"🛠️ Admin Dashboard" }}</h2>
 
 <div class="dashboard-tabs">
   <button class="tab-btn" onclick="showTab('orders')">📦 Orders</button>
