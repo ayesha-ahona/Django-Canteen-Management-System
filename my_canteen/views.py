@@ -481,59 +481,21 @@ def signup_page(request):
 # ---------- Dashboard ----------
 @login_required
 def dashboard(request):
-    try:
-        profile = UserProfile.objects.get(user=request.user)
-        role = profile.role
-    except UserProfile.DoesNotExist:
-        messages.error(request, "Profile not found.")
-        return redirect('home')
+    profile = UserProfile.objects.get(user=request.user)
+    role = profile.role
 
-    # সব অর্ডার ও আইটেম নিয়ে আসা (যাতে admin ও vendor দুজনই দেখতে পারে)
-    orders = (
-        Order.objects
-        .select_related('user')
-        .prefetch_related('orderitem_set__item')
-        .order_by('-id')
-    )
-    items = MenuItem.objects.all()
-
-    # ---------- মূল লজিক ----------
-    # যদি Vendor হয় → admin-এর dashboard দেখাবে
-    if role == "vendor":
-        dashboard_title = "🏪 Vendor Dashboard"
-        return render(
-            request,
-            "my_canteen/dashboard/admin.html",
-            {"profile": profile, "orders": orders, "items": items, "dashboard_title": dashboard_title}
-        )
-
-    # যদি Admin হয় → vendor-এর dashboard দেখাবে
-    elif role == "admin":
-        dashboard_title = "🛠️ Admin Dashboard"
-        return render(
-            request,
-            "my_canteen/dashboard/vendor.html",
-            {"profile": profile, "orders": orders, "items": items, "dashboard_title": dashboard_title}
-        )
-
-    # অন্য কেউ হলে নিজ নিজ user view দেখাবে
+    if role in ["vendor", "admin"]:
+        orders = Order.objects.all().order_by('-created_at')
+        items = MenuItem.objects.all()
     elif role == "staff":
         orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by('-created_at')
-        dashboard_title = "👨‍🍳 Staff Dashboard"
-        return render(
-            request,
-            "my_canteen/dashboard/vendor.html",
-            {"profile": profile, "orders": orders, "dashboard_title": dashboard_title}
-        )
-
+        items = None
     else:
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
-        dashboard_title = "📋 My Dashboard"
-        return render(
-            request,
-            "my_canteen/dashboard/vendor.html",
-            {"profile": profile, "orders": orders, "dashboard_title": dashboard_title}
-        )
+        items = None
+
+    template_name = f"my_canteen/dashboard/{role}.html"
+    return render(request, template_name, {"profile": profile, "orders": orders, "items": items})
 
 
 # ---------- Vendor Dashboard ----------
