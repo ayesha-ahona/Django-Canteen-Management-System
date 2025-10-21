@@ -1,0 +1,12 @@
+{% extends "my_canteen/base.html" %}
+
+{% block content %}
+<h2>Login</h2>
+<form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">Login</button>
+</form>
+
+<p>Don't have an account? <a href="/signup/">Signup here</a></p>
+{% endblock %}
