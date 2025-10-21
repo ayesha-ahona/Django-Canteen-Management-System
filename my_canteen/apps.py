@@ -1,0 +1,9 @@
+# my_canteen/apps.py
+from django.apps import AppConfig
+
+class MyCanteenConfig(AppConfig):
+    default_auto_field = 'django.db.models.BigAutoField'
+    name = 'my_canteen'
+
+    def ready(self):
+        import my_canteen.signals  # noqa
