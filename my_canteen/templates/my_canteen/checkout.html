@@ -1,0 +1,64 @@
+{% extends "my_canteen/base.html" %}
+{% load static %}
+{% block content %}
+<div class="container my-4">
+  <h2 class="mb-3">Checkout</h2>
+
+  <div class="card mb-3">
+    <div class="card-body">
+      <h5 class="card-title">Order Summary</h5>
+      <p class="mb-0"><strong>Order ID:</strong> {{ order.id }}</p>
+      <p class="mb-0"><strong>Total:</strong> {{ order.total_price }}</p>
+      {% if order.address %}
+      <p class="mb-0"><strong>Address:</strong> {{ order.address }}</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <form method="post" class="card">
+    <div class="card-body">
+      {% csrf_token %}
+      <h5 class="card-title">Payment Method</h5>
+
+      <!-- Payment method radios -->
+      <div class="mb-3">
+        {{ form.payment_method }}
+      </div>
+
+      <!-- Mock card fields -->
+      <div id="mock-card-fields" class="row g-2" style="display:none;">
+        <div class="col-md-6">
+          <label class="form-label">{{ form.card_number.label }}</label>
+          {{ form.card_number }}
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">{{ form.card_cvc.label }}</label>
+          {{ form.card_cvc }}
+        </div>
+        <div class="col-12">
+          <small class="text-muted">Demo only — no real charge.</small>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary mt-3">Pay Now</button>
+    </div>
+  </form>
+
+  <div class="mt-3">
+    <a href="{% url 'cart' %}" class="btn btn-link">&larr; Back to cart</a>
+  </div>
+</div>
+
+<script>
+(function () {
+  const radios = document.querySelectorAll('input[name="payment_method"]');
+  const mockFields = document.getElementById('mock-card-fields');
+  function toggleFields() {
+    const v = document.querySelector('input[name="payment_method"]:checked')?.value;
+    mockFields.style.display = (v === 'mock_card') ? 'block' : 'none';
+  }
+  radios.forEach(r => r.addEventListener('change', toggleFields));
+  toggleFields();
+})();
+</script>
+{% endblock %}
