@@ -1,9 +1,0 @@
-{% extends "my_canteen/base.html" %}
-{% block content %}
-<div class="container my-5 text-center">
-  <h2 class="mb-3">Payment Failed ❌</h2>
-  <p>Something went wrong. Please try again or choose another payment method.</p>
-  <a href="{% url 'checkout' %}" class="btn btn-warning mt-3">Try Again</a>
-  <a href="{% url 'cart' %}" class="btn btn-link mt-3">Back to cart</a>
-</div>
-{% endblock %}
