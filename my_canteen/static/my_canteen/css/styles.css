@@ -218,10 +218,10 @@ body {
 .btn {
     background: #d32f2f;
     color: #fff;
-    padding: 10px 16px;
+    padding: 8px 14px;
     border: none;
-    border-radius: 8px;
-    font-weight: 700;
+    border-radius: 6px;
+    font-weight: 600;
     cursor: pointer;
     text-decoration: none;
     display: inline-block;
@@ -363,12 +363,11 @@ body {
 
 .orders-table.pretty thead th {
     font-weight: 700;
-    color: #444;
+    color: #fff;
+    background: #d32f2f;
     text-transform: uppercase;
-    font-size: 12px;
-    letter-spacing: .4px;
+    font-size: 13px;
     padding: 14px 12px;
-    border-bottom: 1px solid #eee;
 }
 
 .orders-table.pretty tbody tr {
@@ -386,14 +385,14 @@ body {
     vertical-align: top;
 }
 
-.orders-table .order-line {
+.order-line {
     display: flex;
     align-items: center;
     gap: 8px;
     margin: 3px 0;
 }
 
-.orders-table .dot {
+.dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;

@@ -2,99 +2,109 @@
 {% load static %}
 
 {% block content %}
-<div class="container">
-  <div class="orders-header">
-    <h2>🧾 My Orders</h2>
-    <p class="muted">Track your orders in real-time and cancel if needed (before preparing).</p>
+<section class="container" style="max-width: 1100px;">
+  <div class="page-title" style="display:flex;align-items:center;gap:.6rem;margin:24px 0 12px;">
+    <span style="font-size:22px;">🧾</span>
+    <h2 style="margin:0;">My Orders</h2>
   </div>
 
-  {% if orders %}
-  <div class="card surface">
-    <table class="orders-table pretty">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Placed</th>
-          <th>Items</th>
-          <th>Total</th>
-          <th>Payment</th>
-          <th>Status</th>
-          <th class="actions-col">Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for o in orders %}
-        <tr>
-          <td>#{{ o.id }}</td>
+  <p style="color:#666;margin-bottom:18px;">
+    Track your orders in real-time and cancel if needed <em>(before preparing)</em>.
+  </p>
 
-          <td>
-            <div class="when">
-              {{ o.created_at|date:"M d, Y" }}
-              <div class="sub">{{ o.created_at|date:"H:i a" }}</div>
-            </div>
-          </td>
-
-          <td>
-            {% for it in o.orderitem_set.all %}
-              <div class="order-line">
-                <span class="dot"></span>
-                {{ it.item.name }} × {{ it.quantity }}
-              </div>
-            {% endfor %}
-          </td>
-
-          <td><strong>{{ o.total_price }} Tk</strong></td>
-
-          <td>
-            {% if o.payment_status == 'paid' %}
-              <span class="badge success">Paid</span>
-            {% else %}
-              <span class="badge warn">Unpaid</span>
-            {% endif %}
-          </td>
-
-          <td>
-            {% if o.status == 'pending' %}
-              <span class="badge gray">Pending</span>
-            {% elif o.status == 'accepted' %}
-              <span class="badge info">Accepted</span>
-            {% elif o.status == 'preparing' %}
-              <span class="badge primary">Preparing</span>
-            {% elif o.status == 'ready' %}
-              <span class="badge violet">Ready</span>
-            {% elif o.status == 'delivered' %}
-              <span class="badge blue">Delivered</span>
-            {% elif o.status == 'completed' %}
-              <span class="badge success">Completed</span>
-            {% else %}
-              <span class="badge danger">Cancelled</span>
-            {% endif %}
-          </td>
-
-          <td class="actions">
-            {% if o.id in cancelable_ids %}
-              <form method="post" action="{% url 'user_order_cancel' o.id %}">
-                {% csrf_token %}
-                <button class="btn btn-soft-danger" onclick="return confirm('Cancel this order?');">
-                  Cancel
-                </button>
-              </form>
-            {% else %}
-              <button class="btn btn-soft" disabled>Cancel</button>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% else %}
-    <div class="empty-state">
-      <img src="{% static 'my_canteen/images/empty-box.svg' %}" alt="" />
-      <h3>No orders yet</h3>
-      <p>Browse the menu and place your first order.</p>
-      <a href="{% url 'menu' %}" class="btn">Go to Menu</a>
+  <!-- ফ্ল্যাশ মেসেজ দেখানোর জায়গা -->
+  {% if messages %}
+    <div style="margin-bottom:16px;">
+      {% for message in messages %}
+        <div class="alert {{ message.tags }}" style="background:#fff3cd;border:1px solid #ffeeba;border-radius:10px;padding:10px 14px;margin:6px 0;">
+          {{ message }}
+        </div>
+      {% endfor %}
     </div>
   {% endif %}
-</div>
+
+  <div class="card" style="background:#fff;border:1px solid #eee;border-radius:14px;box-shadow:0 2px 10px rgba(0,0,0,.04);">
+    <div class="table-wrap" style="overflow-x:auto;">
+      <table style="width:100%;border-collapse:separate;border-spacing:0;">
+        <thead style="background:#c62828;color:#fff;">
+          <tr>
+            <th style="padding:14px 16px;font-weight:600;text-align:left;border-top-left-radius:14px;">#</th>
+            <th style="padding:14px 16px;font-weight:600;text-align:left;">Placed</th>
+            <th style="padding:14px 16px;font-weight:600;text-align:left;">Items</th>
+            <th style="padding:14px 16px;font-weight:600;text-align:right;">Total</th>
+            <th style="padding:14px 16px;font-weight:600;text-align:left;">Payment</th>
+            <th style="padding:14px 16px;font-weight:600;text-align:left;">Status</th>
+            <th style="padding:14px 16px;font-weight:600;text-align:left;border-top-right-radius:14px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for order in orders %}
+          <tr style="border-bottom:1px solid #f0f0f0;">
+            <td style="padding:14px 16px;color:#888;">#{{ order.id }}</td>
+
+            <td style="padding:14px 16px;">
+              {{ order.created_at|date:"M d, Y" }}<br>
+              <span style="color:#888;">{{ order.created_at|date:"h:i a" }}</span>
+            </td>
+
+            <td style="padding:14px 16px;">
+              {% for oi in order.orderitem_set.all %}
+                {{ oi.item.name }} × {{ oi.quantity }}<br>
+              {% endfor %}
+            </td>
+
+            <td style="padding:14px 16px;text-align:right;">
+              {{ order.total_price }} Tk
+            </td>
+
+            <td style="padding:14px 16px;">
+              {{ order.payment_status|title }}
+            </td>
+
+            <td style="padding:14px 16px;">
+              {% if order.status == 'completed' %}
+                <span style="background:#2e7d32;color:#fff;padding:4px 10px;border-radius:999px;font-size:.84rem;">Completed</span>
+              {% elif order.status == 'cancelled' %}
+                <span style="background:#ef5350;color:#fff;padding:4px 10px;border-radius:999px;font-size:.84rem;">Cancelled</span>
+              {% elif order.status == 'ready' %}
+                <span style="background:#0288d1;color:#fff;padding:4px 10px;border-radius:999px;font-size:.84rem;">Ready</span>
+              {% elif order.status == 'preparing' %}
+                <span style="background:#f57c00;color:#fff;padding:4px 10px;border-radius:999px;font-size:.84rem;">Preparing</span>
+              {% elif order.status == 'accepted' %}
+                <span style="background:#6d4c41;color:#fff;padding:4px 10px;border-radius:999px;font-size:.84rem;">Accepted</span>
+              {% else %}
+                <span style="background:#616161;color:#fff;padding:4px 10px;border-radius:999px;font-size:.84rem;">Pending</span>
+              {% endif %}
+            </td>
+
+            <td style="padding:14px 16px;">
+              {% if order.id in cancelable_ids %}
+                <form action="{% url 'user_order_cancel' order.id %}" method="post" style="display:inline;">
+                  {% csrf_token %}
+                  <button type="submit"
+                          style="background:#d32f2f;color:#fff;border:none;border-radius:10px;padding:8px 14px;cursor:pointer;">
+                    Cancel
+                  </button>
+                </form>
+              {% else %}
+                <button type="button" disabled
+                        title="You can cancel before preparing only"
+                        style="background:#e0e0e0;color:#777;border:none;border-radius:10px;padding:8px 14px;">
+                  Cancel
+                </button>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" style="padding:28px;text-align:center;color:#777;">
+              No orders yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
 {% endblock %}

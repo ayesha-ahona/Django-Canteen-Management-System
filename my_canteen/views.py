@@ -660,13 +660,13 @@ def order_mark_paid(request, order_id):
 @login_required
 def user_order_cancel(request, order_id):
     """
-    End-user (student/faculty/guest) নিজের অর্ডার preparing-এর আগ পর্যন্ত
-    ক্যানসেল করতে পারবে। ক্যানসেল হলে স্টক রিস্টোর করা হবে।
+    Student / Faculty / Guest নিজের অর্ডার preparing-এর আগে পর্যন্ত ক্যানসেল করতে পারবে।
     """
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
+    # চেক করো ক্যানসেল করা যাবে কিনা
     if not can_user_cancel(order, request.user):
-        messages.error(request, "Sorry, you can no longer cancel this order.")
+        messages.error(request, "You can no longer cancel this order.")
         return redirect("orders")
 
     # স্টক ফেরত দাও
@@ -674,6 +674,7 @@ def user_order_cancel(request, order_id):
         oi.item.stock += oi.quantity
         oi.item.save(update_fields=["stock"])
 
+    # অর্ডারের স্ট্যাটাস আপডেট
     order.status = "cancelled"
     order.save(update_fields=["status"])
 
