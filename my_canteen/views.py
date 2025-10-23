@@ -1,9 +1,16 @@
+# my_canteen/views.py
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
 from django.db.models import Q, Avg, Count
 from django.contrib import messages
-from django.http import HttpResponseForbidden, HttpResponseRedirect, JsonResponse, HttpResponse
+from django.http import (
+    HttpResponseForbidden,
+    HttpResponseRedirect,
+    JsonResponse,
+    HttpResponse,
+)
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -13,28 +20,45 @@ from .models import MenuItem, UserProfile, Order, OrderItem, Review, Payment
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm
 
 
-# ---------- Helpers ----------
+# ----------- Helpers -----------
 def get_role(user):
+    """UserProfile না থাকলে guest রিটার্ন করবে"""
     try:
         return user.userprofile.role
     except UserProfile.DoesNotExist:
         return "guest"
 
+
+def get_effective_role(real_role: str) -> str:
+    """
+    UI/হেডিং-এ real_role দেখাবো, কিন্তু ক্ষমতা/ডেটা 'effective_role' দিয়ে।
+    - admin -> vendor ক্ষমতা
+    - vendor -> admin ক্ষমতা
+    - অন্যরা (student/faculty/staff/guest) -> আগের মতই
+    """
+    if real_role == "admin":
+        return "vendor"
+    if real_role == "vendor":
+        return "admin"
+    return real_role
+
+
 def require_roles(user, allowed):
+    """সহজ পারমিশন চেক (এই প্রজেক্টে বেশিরভাগ জায়গায় admin & vendor উভয়েই allowed)"""
     return get_role(user) in allowed
 
 
-# ---------- Home ----------
+# ----------- Home -----------
 def home(request):
     popular_items = MenuItem.objects.filter(is_popular=True, is_active=True)[:6]
-    return render(request, 'my_canteen/home.html', {"popular_items": popular_items})
+    return render(request, "my_canteen/home.html", {"popular_items": popular_items})
 
 
-# ---------- Menu ----------
+# ----------- Menu -----------
 def menu_page(request):
-    query = request.GET.get('q')
-    min_price = request.GET.get('min_price')
-    max_price = request.GET.get('max_price')
+    query = request.GET.get("q")
+    min_price = request.GET.get("min_price")
+    max_price = request.GET.get("max_price")
 
     items = MenuItem.objects.filter(is_active=True)
 
@@ -45,24 +69,24 @@ def menu_page(request):
     if max_price:
         items = items.filter(price__lte=max_price)
 
-    return render(request, 'my_canteen/menu.html', {'items': items})
+    return render(request, "my_canteen/menu.html", {"items": items})
 
 
-# ---------- Item Detail + Reviews ----------
+# ----------- Item Detail + Reviews -----------
 def item_detail(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
-    reviews = Review.objects.filter(item=item).select_related('user').order_by('-created_at')
-    agg = reviews.aggregate(avg=Avg('rating'), cnt=Count('id'))
-    avg_rating = round(agg['avg'] or 0, 1)
-    total_reviews = agg['cnt'] or 0
+    reviews = Review.objects.filter(item=item).select_related("user").order_by("-created_at")
+    agg = reviews.aggregate(avg=Avg("rating"), cnt=Count("id"))
+    avg_rating = round(agg["avg"] or 0, 1)
+    total_reviews = agg["cnt"] or 0
 
     can_review, already, form = False, False, None
     if request.user.is_authenticated:
         purchased = OrderItem.objects.filter(
             order__user=request.user,
-            order__status__in=['delivered', 'completed'],
-            item=item
+            order__status__in=["delivered", "completed"],
+            item=item,
         ).exists()
         already = Review.objects.filter(user=request.user, item=item).exists()
         can_review = purchased and not already
@@ -87,8 +111,8 @@ def submit_review(request, item_id):
 
     purchased = OrderItem.objects.filter(
         order__user=request.user,
-        order__status__in=['delivered', 'completed'],
-        item=item
+        order__status__in=["delivered", "completed"],
+        item=item,
     ).exists()
     if not purchased:
         messages.error(request, "You can review only after you received the item.")
@@ -104,8 +128,8 @@ def submit_review(request, item_id):
             Review.objects.create(
                 user=request.user,
                 item=item,
-                rating=form.cleaned_data['rating'],
-                comment=form.cleaned_data['comment']
+                rating=form.cleaned_data["rating"],
+                comment=form.cleaned_data["comment"],
             )
             messages.success(request, "Thank you for your feedback!")
         else:
@@ -113,7 +137,6 @@ def submit_review(request, item_id):
     return redirect("item_detail", item_id=item.id)
 
 
-# ---------- Review Edit/Delete ----------
 @login_required
 def edit_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
@@ -144,7 +167,7 @@ def delete_review(request, item_id):
     return HttpResponseForbidden("Invalid request")
 
 
-# ---------- Cart ----------
+# ----------- Cart -----------
 @login_required
 def add_to_cart(request, item_id):
     cart = request.session.get("cart", {})
@@ -152,6 +175,7 @@ def add_to_cart(request, item_id):
     request.session["cart"] = cart
     messages.success(request, "Item added to cart!")
     return redirect("menu")
+
 
 @login_required
 def add_to_cart_qty(request, item_id, qty):
@@ -162,6 +186,7 @@ def add_to_cart_qty(request, item_id, qty):
     messages.success(request, f"Added {qty} item(s) to cart.")
     return redirect("menu")
 
+
 @login_required
 def remove_from_cart(request, item_id):
     cart = request.session.get("cart", {})
@@ -170,6 +195,7 @@ def remove_from_cart(request, item_id):
     messages.info(request, "Item removed from cart.")
     return redirect("cart")
 
+
 @login_required
 def increase_cart_qty(request, item_id):
     cart = request.session.get("cart", {})
@@ -177,6 +203,7 @@ def increase_cart_qty(request, item_id):
         cart[str(item_id)] += 1
     request.session["cart"] = cart
     return redirect("cart")
+
 
 @login_required
 def decrease_cart_qty(request, item_id):
@@ -187,6 +214,7 @@ def decrease_cart_qty(request, item_id):
             cart.pop(str(item_id))
     request.session["cart"] = cart
     return redirect("cart")
+
 
 @login_required
 def update_cart(request, item_id):
@@ -200,6 +228,7 @@ def update_cart(request, item_id):
         request.session["cart"] = cart
         messages.success(request, "Cart updated successfully!")
     return redirect("cart")
+
 
 @login_required
 def view_cart(request):
@@ -218,140 +247,114 @@ def view_cart(request):
     return render(request, "my_canteen/cart.html", {"items": items, "total": total})
 
 
-# ---------- Checkout with Payment ----------
+# ----------- Checkout + Payment -----------
 @login_required
 def checkout(request):
-    """
-    Updated checkout: handles payment method selection and payment processing
-    """
     cart = request.session.get("cart", {})
     if not cart:
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
 
-    # Calculate cart total
+    # total & validate stock
     total = 0
     cart_items = []
     for item_id, qty in cart.items():
-        try:
-            item = MenuItem.objects.get(id=item_id, is_active=True)
-            if item.stock < qty:
-                messages.error(request, f"{item.name} is out of stock!")
-                return redirect("cart")
-            subtotal = float(item.price) * qty
-            cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
-            total += subtotal
-        except MenuItem.DoesNotExist:
-            continue
+        item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+        if item.stock < qty:
+            messages.error(request, f"{item.name} is out of stock!")
+            return redirect("cart")
+        subtotal = float(item.price) * qty
+        cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
+        total += subtotal
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = CheckoutPaymentForm(request.POST)
         if form.is_valid():
-            method = form.cleaned_data['payment_method']
+            method = form.cleaned_data["payment_method"]
 
-            # Create order
             order = Order.objects.create(
                 user=request.user,
                 total_price=total,
                 address="Default Address",
-                status='pending',
-                payment_status='unpaid',
-                payment_method=method
+                status="pending",
+                payment_status="unpaid",
+                payment_method=method,
             )
 
-            # Create order items and update stock
+            # create order items & reduce stock
             for item_id, qty in cart.items():
                 item = get_object_or_404(MenuItem, id=item_id)
                 item.stock -= qty
                 item.save()
                 OrderItem.objects.create(
-                    order=order, 
-                    item=item, 
-                    quantity=qty, 
-                    unit_price=item.price
+                    order=order, item=item, quantity=qty, unit_price=item.price
                 )
 
-            # Create payment record
             payment = Payment.objects.create(
-                order=order,
-                method=method,
-                amount=order.total_price,
-                status='pending'
+                order=order, method=method, amount=order.total_price, status="pending"
             )
 
-            # Handle payment based on method
-            if method == 'cash':
-                payment.status = 'paid'
+            if method == "cash":
+                payment.status = "paid"
                 payment.paid_at = timezone.now()
                 payment.transaction_id = f"CASH-{order.id}-{int(timezone.now().timestamp())}"
                 payment.save()
-                
-                order.payment_status = 'paid'
+                order.payment_status = "paid"
                 order.save()
-
                 request.session["cart"] = {}
-                messages.success(request, f"Order placed successfully! Total: {total} Tk (Cash on Delivery)")
-                return redirect('payment_success')
+                messages.success(
+                    request, f"Order placed successfully! Total: {total} Tk (Cash)"
+                )
+                return redirect("payment_success")
 
-            elif method == 'mock_card':
-                card_number = form.cleaned_data.get('card_number')
-                card_cvc = form.cleaned_data.get('card_cvc')
-                
-                if card_number and card_cvc:
-                    payment.status = 'paid'
-                    payment.paid_at = timezone.now()
-                    payment.transaction_id = f"MOCK-{order.id}-{int(timezone.now().timestamp())}"
-                    payment.save()
-                    
-                    order.payment_status = 'paid'
-                    order.save()
+            elif method == "mock_card":
+                # demo success
+                payment.status = "paid"
+                payment.paid_at = timezone.now()
+                payment.transaction_id = f"MOCK-{order.id}-{int(timezone.now().timestamp())}"
+                payment.save()
+                order.payment_status = "paid"
+                order.save()
+                request.session["cart"] = {}
+                messages.success(request, f"Payment successful! Order #{order.id}")
+                return redirect("payment_success")
 
-                    request.session["cart"] = {}
-                    messages.success(request, f"Payment successful! Order #{order.id}")
-                    return redirect('payment_success')
-                else:
-                    payment.status = 'failed'
-                    payment.save()
-                    messages.error(request, "Card payment failed. Please try again.")
-                    return redirect('payment_failed')
-
-            # For Stripe/SSLCommerz, redirect to payment gateway
+            # (Stripe/SSLCommerz) – redirect to gateway
             request.session["cart"] = {}
-            return redirect('payment_start', order_id=order.id)
+            return redirect("payment_start", order_id=order.id)
     else:
         form = CheckoutPaymentForm()
 
-    context = {
-        'items': cart_items,
-        'total': total,
-        'form': form
-    }
-    return render(request, 'my_canteen/checkout.html', context)
+    return render(
+        request,
+        "my_canteen/checkout.html",
+        {"items": cart_items, "total": total, "form": form},
+    )
 
 
 def payment_start(request, order_id):
-    """
-    Initialize payment gateway (Stripe/SSLCommerz)
-    """
     order = get_object_or_404(Order, id=order_id, user=request.user)
     payment = order.payment
-    domain = request.build_absolute_uri('/')[:-1]
+    domain = request.build_absolute_uri("/")[:-1]
 
-    if payment.method == 'stripe':
+    if payment.method == "stripe":
         try:
             import stripe
+
             stripe.api_key = settings.STRIPE_SECRET_KEY
             session = stripe.checkout.Session.create(
                 mode="payment",
                 payment_method_types=["card"],
-                line_items=[{
-                    "price_data": {
-                        "currency": "usd",
-                        "product_data": {"name": f"Canteen Order #{order.id}"},
-                        "unit_amount": int(order.total_price * 100),
-                    },
-                    "quantity": 1,
-                }],
+                line_items=[
+                    {
+                        "price_data": {
+                            "currency": "usd",
+                            "product_data": {"name": f"Canteen Order #{order.id}"},
+                            "unit_amount": int(order.total_price * 100),
+                        },
+                        "quantity": 1,
+                    }
+                ],
                 success_url=f"{domain}{reverse('payment_success')}",
                 cancel_url=f"{domain}{reverse('payment_failed')}",
                 client_reference_id=str(order.id),
@@ -361,164 +364,184 @@ def payment_start(request, order_id):
             return redirect(session.url, code=303)
         except Exception as e:
             messages.error(request, f"Payment initialization failed: {str(e)}")
-            return redirect('payment_failed')
+            return redirect("payment_failed")
 
-    elif payment.method == 'sslcommerz':
-        # TODO: Implement SSLCommerz integration
+    elif payment.method == "sslcommerz":
         messages.info(request, "SSLCommerz integration coming soon!")
-        return redirect('payment_failed')
+        return redirect("payment_failed")
 
-    return redirect('checkout')
+    return redirect("checkout")
 
 
 def payment_success(request):
-    """Payment success page"""
-    return render(request, 'my_canteen/payment_success.html')
+    return render(request, "my_canteen/payment_success.html")
 
 
 def payment_failed(request):
-    """Payment failed page"""
-    return render(request, 'my_canteen/payment_failed.html')
+    return render(request, "my_canteen/payment_failed.html")
 
 
 @csrf_exempt
 def stripe_webhook(request):
-    """Handle Stripe webhook events"""
-    if request.method != 'POST':
-        return HttpResponse(status=405)
-    
-    # TODO: Verify Stripe signature and process webhook
-    # Example: checkout.session.completed event
-    # Find Payment by session.id and mark as paid
-    
+    # TODO: verify signature & mark paid
     return HttpResponse(status=200)
 
 
 @csrf_exempt
 def sslcommerz_ipn(request):
-    """Handle SSLCommerz IPN callback"""
-    if request.method != 'POST':
-        return HttpResponse(status=405)
-    
-    # TODO: Verify SSLCommerz IPN and update payment status
-    
+    # TODO: verify IPN & update payment
     return HttpResponse(status=200)
 
 
 def order_status_api(request, order_id):
-    """API endpoint for real-time order status polling"""
     order = get_object_or_404(Order, id=order_id, user=request.user)
     data = {
-        'order_id': order.id,
-        'payment_status': getattr(order.payment, 'status', 'missing'),
-        'transaction_id': getattr(order.payment, 'transaction_id', None),
-        'order_status': order.status,
+        "order_id": order.id,
+        "payment_status": getattr(order.payment, "status", "missing"),
+        "transaction_id": getattr(order.payment, "transaction_id", None),
+        "order_status": order.status,
     }
     return JsonResponse(data)
 
 
-# ---------- Orders ----------
+# ----------- Orders list page -----------
 @login_required
 def orders_page(request):
-    profile = UserProfile.objects.get(user=request.user)
+    profile = UserProfile.objects.select_related("user").get(user=request.user)
     role = get_role(request.user)
 
     if role in ["vendor", "admin"]:
         orders = Order.objects.all().order_by("-created_at")
     elif role == "staff":
-        orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by("-created_at")
+        orders = Order.objects.filter(
+            status__in=["accepted", "preparing"]
+        ).order_by("-created_at")
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
 
-    return render(request, 'my_canteen/orders.html', {"orders": orders, "profile": profile})
+    return render(request, "my_canteen/orders.html", {"orders": orders, "profile": profile})
 
 
-# ---------- Static Pages ----------
+# ----------- Static pages + anchor redirects -----------
 def about_page(request):
-    return render(request, 'my_canteen/about.html')
+    return render(request, "my_canteen/about.html")
+
 
 def contact_page(request):
-    return render(request, 'my_canteen/contact.html')
+    return render(request, "my_canteen/contact.html")
 
 
-# ---------- Anchor Redirects ----------
 def about_anchor(request):
     return HttpResponseRedirect(f"{reverse('home')}#about")
+
 
 def contact_anchor(request):
     return HttpResponseRedirect(f"{reverse('home')}#contact")
 
 
-# ---------- Signup ----------
+# ----------- Signup -----------
 def signup_page(request):
-    if request.method == 'POST':
+    if request.method == "POST":
         form = CustomSignupForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.email = form.cleaned_data.get('email')
+            user.email = form.cleaned_data.get("email")
             user.save()
 
-            role = form.cleaned_data.get('role', 'guest')
-            phone = form.cleaned_data.get('phone')
+            role = form.cleaned_data.get("role", "guest")
+            phone = form.cleaned_data.get("phone")
 
+            # প্রথম ইউজারকে admin
             if User.objects.count() == 1:
-                role = 'admin'
+                role = "admin"
 
             profile = user.userprofile
-            valid_roles = ['admin', 'student', 'faculty', 'staff', 'vendor', 'guest']
-            profile.role = role if role in valid_roles else 'guest'
+            valid_roles = ["admin", "student", "faculty", "staff", "vendor", "guest"]
+            profile.role = role if role in valid_roles else "guest"
             profile.phone = phone
             profile.save()
 
             messages.success(request, f"Account created successfully as {profile.role}! Please login.")
-            return redirect('login')
+            return redirect("login")
     else:
         form = CustomSignupForm()
 
-    return render(request, 'my_canteen/signup.html', {'form': form})
+    return render(request, "my_canteen/signup.html", {"form": form})
 
 
-# ---------- Dashboard ----------
+# ----------- Dashboard (Swap logic) -----------
+# views.py
+
 @login_required
 def dashboard(request):
-    profile = UserProfile.objects.get(user=request.user)
-    role = profile.role
+    """
+    UI label/heading: real_role (যেমন Admin/Vendor লিখে থাকবে)
+    কনটেন্ট/টেমপ্লেট + ডেটা: effective_role (admin <-> vendor swap)
+    """
+    profile = UserProfile.objects.select_related("user").get(user=request.user)
 
-    if role in ["vendor", "admin"]:
-        orders = Order.objects.all().order_by('-created_at')
+    real_role = profile.role                         # আসল রোল (UI-তে দেখাবো)
+    effective_role = get_effective_role(real_role)   # swap করা রোল (কনটেন্ট/ডেটা)
+
+    # --- ডেটা লোডিং effective_role দিয়ে ---
+    if effective_role in ["admin", "vendor"]:
+        orders = Order.objects.all().order_by("-created_at")
         items = MenuItem.objects.all()
-    elif role == "staff":
-        orders = Order.objects.filter(status__in=["accepted", "preparing"]).order_by('-created_at')
+    elif effective_role == "staff":
+        orders = Order.objects.filter(
+            status__in=["accepted", "preparing"]
+        ).order_by("-created_at")
         items = None
     else:
-        orders = Order.objects.filter(user=request.user).order_by('-created_at')
+        orders = Order.objects.filter(user=request.user).order_by("-created_at")
         items = None
 
-    template_name = f"my_canteen/dashboard/{role}.html"
-    return render(request, template_name, {"profile": profile, "orders": orders, "items": items})
+    # --- হেডিং/লেবেল real_role দিয়ে ---
+    title_map = {
+        "admin": "🛠️ Admin Dashboard",
+        "vendor": "🏪 Vendor Dashboard",
+        "staff": "👨‍🍳 Staff Dashboard",
+        "student": "🎓 Student Dashboard",
+        "faculty": "🎓 Faculty Dashboard",
+        "guest": "👋 Welcome",
+    }
+    dashboard_title = title_map.get(real_role, "Dashboard")
+
+    # 🔁 **কনটেন্ট টেমপ্লেট** effective_role দিয়ে নির্বাচন (এটাই swap)
+    # Admin দেখবে vendor.html, Vendor দেখবে admin.html
+    template_name = f"my_canteen/dashboard/{effective_role}.html"
+
+    ctx = {
+        "profile": profile,
+        "orders": orders,
+        "items": items,
+        "real_role": real_role,           # চাইলে টেমপ্লেটে দরকার হলে ব্যবহার করবে
+        "effective_role": effective_role,
+        "dashboard_title": dashboard_title,
+    }
+    return render(request, template_name, ctx)
 
 
-# ---------- Vendor Dashboard ----------
+
+# ----------- (optional) Vendor-only view (use UI route) -----------
 @login_required
 def vendor_dashboard(request):
-    if get_role(request.user) != 'vendor':
+    if get_role(request.user) != "vendor":
         messages.error(request, "Only vendor can access this dashboard.")
-        return redirect('home')
-    return render(request, 'my_canteen/dashboard/superadmin.html')
+        return redirect("home")
+    return render(request, "my_canteen/dashboard/superadmin.html")
 
 
-# ---------- Profile ----------
+# ----------- Profile / Settings -----------
 @login_required
 def profile_page(request):
     profile = UserProfile.objects.get(user=request.user)
-    return render(request, 'my_canteen/profile.html', {"profile": profile})
+    return render(request, "my_canteen/profile.html", {"profile": profile})
 
 
-# ---------- Settings ----------
 @login_required
 def settings_page(request):
     profile = UserProfile.objects.get(user=request.user)
-
     if request.method == "POST":
         email = request.POST.get("email")
         phone = request.POST.get("phone")
@@ -528,87 +551,92 @@ def settings_page(request):
         profile.save()
         messages.success(request, "Profile updated successfully!")
         return redirect("settings")
+    return render(request, "my_canteen/settings.html", {"profile": profile})
 
-    return render(request, 'my_canteen/settings.html', {"profile": profile})
 
-
-# ---------- Order Lifecycle ----------
+# ----------- Order lifecycle (admin & vendor উভয়েই allowed) -----------
 @login_required
 def order_accept(request, order_id):
-    if not require_roles(request.user, ['vendor', 'admin']):
+    if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect('dashboard')
+        return redirect("dashboard")
     order = get_object_or_404(Order, id=order_id)
-    order.status = 'accepted'
+    order.status = "accepted"
     order.save()
     messages.success(request, f"Order #{order.id} accepted.")
-    return redirect('dashboard')
+    return redirect("dashboard")
+
 
 @login_required
 def order_preparing(request, order_id):
-    if not require_roles(request.user, ['vendor', 'admin', 'staff']):
+    if not require_roles(request.user, ["vendor", "admin", "staff"]):
         messages.error(request, "Not authorized.")
-        return redirect('dashboard')
+        return redirect("dashboard")
     order = get_object_or_404(Order, id=order_id)
-    order.status = 'preparing'
+    order.status = "preparing"
     order.save()
     messages.success(request, f"Order #{order.id} set to Preparing.")
-    return redirect('dashboard')
+    return redirect("dashboard")
+
 
 @login_required
 def order_ready(request, order_id):
-    if not require_roles(request.user, ['vendor', 'admin', 'staff']):
+    if not require_roles(request.user, ["vendor", "admin", "staff"]):
         messages.error(request, "Not authorized.")
-        return redirect('dashboard')
+        return redirect("dashboard")
     order = get_object_or_404(Order, id=order_id)
-    order.status = 'ready'
+    order.status = "ready"
     order.save()
     messages.success(request, f"Order #{order.id} marked Ready.")
-    return redirect('dashboard')
+    return redirect("dashboard")
+
 
 @login_required
 def order_delivered(request, order_id):
-    if not require_roles(request.user, ['vendor', 'admin']):
+    if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect('dashboard')
+        return redirect("dashboard")
     order = get_object_or_404(Order, id=order_id)
-    order.status = 'delivered'
+    order.status = "delivered"
     order.save()
     messages.success(request, f"Order #{order.id} marked Delivered.")
-    return redirect('dashboard')
+    return redirect("dashboard")
+
 
 @login_required
 def order_completed(request, order_id):
-    if not require_roles(request.user, ['vendor', 'admin']):
+    if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect('dashboard')
+        return redirect("dashboard")
     order = get_object_or_404(Order, id=order_id)
-    if order.payment_status != 'paid':
+    if order.payment_status != "paid":
         messages.warning(request, "Mark as Paid before completing.")
-        return redirect('dashboard')
-    order.status = 'completed'
+        return redirect("dashboard")
+    order.status = "completed"
     order.save()
     messages.success(request, f"Order #{order.id} Completed.")
-    return redirect('dashboard')
+    return redirect("dashboard")
+
 
 @login_required
 def order_cancel(request, order_id):
-    if not require_roles(request.user, ['vendor', 'admin']):
+    if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect('dashboard')
+        return redirect("dashboard")
     order = get_object_or_404(Order, id=order_id)
-    order.status = 'cancelled'
+    order.status = "cancelled"
     order.save()
     messages.info(request, f"Order #{order.id} Cancelled.")
-    return redirect('dashboard')
+    return redirect("dashboard")
+
 
 @login_required
 def order_mark_paid(request, order_id):
-    if not require_roles(request.user, ['vendor', 'admin']):
+    if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect('dashboard')
+        return redirect("dashboard")
     order = get_object_or_404(Order, id=order_id)
-    order.payment_status = 'paid'
+    order.payment_status = "paid"
     order.save()
     messages.success(request, f"Order #{order.id} marked as PAID.")
-    return redirect('dashboard')
+    return redirect("dashboard")
