@@ -2,89 +2,99 @@
 {% load static %}
 
 {% block content %}
-<div class="container" style="max-width:1100px;">
-  <h2 class="mb-3">
-    {% if profile.role in "vendor admin" %}
-      All Orders
-    {% elif profile.role == "staff" %}
-      Kitchen Queue
-    {% else %}
-      My Orders
-    {% endif %}
-  </h2>
+<div class="container">
+  <div class="orders-header">
+    <h2>🧾 My Orders</h2>
+    <p class="muted">Track your orders in real-time and cancel if needed (before preparing).</p>
+  </div>
 
   {% if orders %}
-  <div class="table-responsive">
-    <table class="table table-bordered align-middle">
-      <thead class="table-dark">
+  <div class="card surface">
+    <table class="orders-table pretty">
+      <thead>
         <tr>
-          <th style="width:70px;">#</th>
-          <th>User</th>
+          <th>#</th>
+          <th>Placed</th>
           <th>Items</th>
           <th>Total</th>
           <th>Payment</th>
           <th>Status</th>
-          <th style="width:220px;">Actions</th>
+          <th class="actions-col">Actions</th>
         </tr>
       </thead>
       <tbody>
-      {% for order in orders %}
+        {% for o in orders %}
         <tr>
-          <td>#{{ order.id }}</td>
-          <td>{{ order.user.username }}</td>
+          <td>#{{ o.id }}</td>
+
           <td>
-            {% for oi in order.orderitem_set.all %}
-              {{ oi.item.name }} × {{ oi.quantity }}{% if not forloop.last %}<br>{% endif %}
+            <div class="when">
+              {{ o.created_at|date:"M d, Y" }}
+              <div class="sub">{{ o.created_at|date:"H:i a" }}</div>
+            </div>
+          </td>
+
+          <td>
+            {% for it in o.orderitem_set.all %}
+              <div class="order-line">
+                <span class="dot"></span>
+                {{ it.item.name }} × {{ it.quantity }}
+              </div>
             {% endfor %}
           </td>
-          <td>{{ order.total_price }} Tk</td>
-          <td>{{ order.payment_status|capfirst }}</td>
+
+          <td><strong>{{ o.total_price }} Tk</strong></td>
+
           <td>
-            {% if order.status == "completed" %}
-              <span class="badge bg-success">Completed</span>
-            {% elif order.status == "cancelled" %}
-              <span class="badge bg-secondary">Cancelled</span>
-            {% elif order.status == "ready" %}
-              <span class="badge bg-info text-dark">Ready</span>
-            {% elif order.status == "preparing" %}
-              <span class="badge bg-warning text-dark">Preparing</span>
-            {% elif order.status == "accepted" %}
-              <span class="badge bg-primary">Accepted</span>
+            {% if o.payment_status == 'paid' %}
+              <span class="badge success">Paid</span>
             {% else %}
-              <span class="badge bg-dark">Pending</span>
+              <span class="badge warn">Unpaid</span>
             {% endif %}
           </td>
+
           <td>
-            {# ---- Vendor/Admin management actions (তোমার আগের মত থাকুক) ---- #}
-            {% if profile.role in "vendor admin" %}
-              <a class="btn btn-sm btn-outline-primary mb-1" href="{% url 'order_accept' order.id %}">Accept</a>
-              <a class="btn btn-sm btn-outline-warning mb-1" href="{% url 'order_preparing' order.id %}">Preparing</a>
-              <a class="btn btn-sm btn-outline-info mb-1"    href="{% url 'order_ready' order.id %}">Ready</a>
-              <a class="btn btn-sm btn-outline-secondary mb-1" href="{% url 'order_delivered' order.id %}">Delivered</a>
-              <a class="btn btn-sm btn-outline-success mb-1"  href="{% url 'order_mark_paid' order.id %}">Mark Paid</a>
-              <a class="btn btn-sm btn-danger mb-1"            href="{% url 'order_cancel' order.id %}"
-                 onclick="return confirm('Cancel this order?');">Cancel</a>
-              <a class="btn btn-sm btn-success mb-1"           href="{% url 'order_completed' order.id %}">Complete</a>
+            {% if o.status == 'pending' %}
+              <span class="badge gray">Pending</span>
+            {% elif o.status == 'accepted' %}
+              <span class="badge info">Accepted</span>
+            {% elif o.status == 'preparing' %}
+              <span class="badge primary">Preparing</span>
+            {% elif o.status == 'ready' %}
+              <span class="badge violet">Ready</span>
+            {% elif o.status == 'delivered' %}
+              <span class="badge blue">Delivered</span>
+            {% elif o.status == 'completed' %}
+              <span class="badge success">Completed</span>
             {% else %}
-              {# ---- End-user Smart Cancel: preparing-এর আগ পর্যন্ত ---- #}
-              {% if order.id in cancelable_ids %}
-                <a class="btn btn-sm btn-outline-danger"
-                   href="{% url 'user_order_cancel' order.id %}"
-                   onclick="return confirm('Cancel this order?');">
-                   Cancel
-                </a>
-              {% else %}
-                <span class="text-muted">No actions</span>
-              {% endif %}
+              <span class="badge danger">Cancelled</span>
+            {% endif %}
+          </td>
+
+          <td class="actions">
+            {% if o.id in cancelable_ids %}
+              <form method="post" action="{% url 'user_order_cancel' o.id %}">
+                {% csrf_token %}
+                <button class="btn btn-soft-danger" onclick="return confirm('Cancel this order?');">
+                  Cancel
+                </button>
+              </form>
+            {% else %}
+              <button class="btn btn-soft" disabled>Cancel</button>
             {% endif %}
           </td>
         </tr>
-      {% endfor %}
+        {% endfor %}
       </tbody>
     </table>
   </div>
   {% else %}
-    <p class="text-muted">No orders found.</p>
+    <div class="empty-state">
+      <img src="{% static 'my_canteen/images/empty-box.svg' %}" alt="" />
+      <h3>No orders yet</h3>
+      <p>Browse the menu and place your first order.</p>
+      <a href="{% url 'menu' %}" class="btn">Go to Menu</a>
+    </div>
   {% endif %}
 </div>
 {% endblock %}
