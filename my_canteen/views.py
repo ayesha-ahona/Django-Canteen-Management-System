@@ -20,7 +20,7 @@ from .models import MenuItem, UserProfile, Order, OrderItem, Review, Payment
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm
 
 
-# ----------- Helpers -----------
+# ---------- Helpers ----------
 def get_role(user):
     """UserProfile না থাকলে guest রিটার্ন করবে"""
     try:
@@ -31,7 +31,7 @@ def get_role(user):
 
 def get_effective_role(real_role: str) -> str:
     """
-    UI/হেডিং-এ real_role দেখাবো, কিন্তু ক্ষমতা/ডেটা 'effective_role' দিয়ে।
+    UI/হেডিং-এ real_role দেখাবো, কিন্তু ক্ষমতা/ডেটা effective_role দিয়ে।
     - admin -> vendor ক্ষমতা
     - vendor -> admin ক্ষমতা
     - অন্যরা (student/faculty/staff/guest) -> আগের মতই
@@ -44,17 +44,30 @@ def get_effective_role(real_role: str) -> str:
 
 
 def require_roles(user, allowed):
-    """সহজ পারমিশন চেক (এই প্রজেক্টে বেশিরভাগ জায়গায় admin & vendor উভয়েই allowed)"""
+    """সহজ পারমিশন চেক"""
     return get_role(user) in allowed
 
 
-# ----------- Home -----------
+def can_user_cancel(order, user) -> bool:
+    """
+    End-user smart cancel:
+    student/faculty/guest নিজের অর্ডার preparing-এর আগ পর্যন্ত (pending/accepted) ক্যানসেল করতে পারবে।
+    """
+    role = get_role(user)
+    if role not in {"student", "faculty", "guest"}:
+        return False
+    if order.user_id != user.id:
+        return False
+    return order.status in {"pending", "accepted"}
+
+
+# ---------- Home ----------
 def home(request):
     popular_items = MenuItem.objects.filter(is_popular=True, is_active=True)[:6]
     return render(request, "my_canteen/home.html", {"popular_items": popular_items})
 
 
-# ----------- Menu -----------
+# ---------- Menu ----------
 def menu_page(request):
     query = request.GET.get("q")
     min_price = request.GET.get("min_price")
@@ -72,7 +85,7 @@ def menu_page(request):
     return render(request, "my_canteen/menu.html", {"items": items})
 
 
-# ----------- Item Detail + Reviews -----------
+# ---------- Item Detail + Reviews ----------
 def item_detail(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
@@ -167,7 +180,7 @@ def delete_review(request, item_id):
     return HttpResponseForbidden("Invalid request")
 
 
-# ----------- Cart -----------
+# ---------- Cart ----------
 @login_required
 def add_to_cart(request, item_id):
     cart = request.session.get("cart", {})
@@ -247,7 +260,7 @@ def view_cart(request):
     return render(request, "my_canteen/cart.html", {"items": items, "total": total})
 
 
-# ----------- Checkout + Payment -----------
+# ---------- Checkout + Payment ----------
 @login_required
 def checkout(request):
     cart = request.session.get("cart", {})
@@ -255,7 +268,6 @@ def checkout(request):
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
 
-    # total & validate stock
     total = 0
     cart_items = []
     for item_id, qty in cart.items():
@@ -281,7 +293,6 @@ def checkout(request):
                 payment_method=method,
             )
 
-            # create order items & reduce stock
             for item_id, qty in cart.items():
                 item = get_object_or_404(MenuItem, id=item_id)
                 item.stock -= qty
@@ -308,7 +319,6 @@ def checkout(request):
                 return redirect("payment_success")
 
             elif method == "mock_card":
-                # demo success
                 payment.status = "paid"
                 payment.paid_at = timezone.now()
                 payment.transaction_id = f"MOCK-{order.id}-{int(timezone.now().timestamp())}"
@@ -319,7 +329,6 @@ def checkout(request):
                 messages.success(request, f"Payment successful! Order #{order.id}")
                 return redirect("payment_success")
 
-            # (Stripe/SSLCommerz) – redirect to gateway
             request.session["cart"] = {}
             return redirect("payment_start", order_id=order.id)
     else:
@@ -404,7 +413,7 @@ def order_status_api(request, order_id):
     return JsonResponse(data)
 
 
-# ----------- Orders list page -----------
+# ---------- Orders list page ----------
 @login_required
 def orders_page(request):
     profile = UserProfile.objects.select_related("user").get(user=request.user)
@@ -419,10 +428,17 @@ def orders_page(request):
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
 
-    return render(request, "my_canteen/orders.html", {"orders": orders, "profile": profile})
+    # smart cancel: যে অর্ডারগুলো end-user ক্যানসেল করতে পারবে
+    cancelable_ids = {o.id for o in orders if can_user_cancel(o, request.user)}
+
+    return render(
+        request,
+        "my_canteen/orders.html",
+        {"orders": orders, "profile": profile, "cancelable_ids": cancelable_ids},
+    )
 
 
-# ----------- Static pages + anchor redirects -----------
+# ---------- Static pages + anchor redirects ----------
 def about_page(request):
     return render(request, "my_canteen/about.html")
 
@@ -439,7 +455,7 @@ def contact_anchor(request):
     return HttpResponseRedirect(f"{reverse('home')}#contact")
 
 
-# ----------- Signup -----------
+# ---------- Signup ----------
 def signup_page(request):
     if request.method == "POST":
         form = CustomSignupForm(request.POST)
@@ -461,7 +477,9 @@ def signup_page(request):
             profile.phone = phone
             profile.save()
 
-            messages.success(request, f"Account created successfully as {profile.role}! Please login.")
+            messages.success(
+                request, f"Account created successfully as {profile.role}! Please login."
+            )
             return redirect("login")
     else:
         form = CustomSignupForm()
@@ -469,9 +487,7 @@ def signup_page(request):
     return render(request, "my_canteen/signup.html", {"form": form})
 
 
-# ----------- Dashboard (Swap logic) -----------
-# views.py
-
+# ---------- Dashboard (admin <-> vendor swap) ----------
 @login_required
 def dashboard(request):
     """
@@ -480,10 +496,10 @@ def dashboard(request):
     """
     profile = UserProfile.objects.select_related("user").get(user=request.user)
 
-    real_role = profile.role                         # আসল রোল (UI-তে দেখাবো)
-    effective_role = get_effective_role(real_role)   # swap করা রোল (কনটেন্ট/ডেটা)
+    real_role = profile.role
+    effective_role = get_effective_role(real_role)
 
-    # --- ডেটা লোডিং effective_role দিয়ে ---
+    # ডেটা লোডিং effective_role দিয়ে
     if effective_role in ["admin", "vendor"]:
         orders = Order.objects.all().order_by("-created_at")
         items = MenuItem.objects.all()
@@ -496,7 +512,7 @@ def dashboard(request):
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
         items = None
 
-    # --- হেডিং/লেবেল real_role দিয়ে ---
+    # হেডিং real_role দিয়ে (UI)
     title_map = {
         "admin": "🛠️ Admin Dashboard",
         "vendor": "🏪 Vendor Dashboard",
@@ -507,23 +523,21 @@ def dashboard(request):
     }
     dashboard_title = title_map.get(real_role, "Dashboard")
 
-    # 🔁 **কনটেন্ট টেমপ্লেট** effective_role দিয়ে নির্বাচন (এটাই swap)
-    # Admin দেখবে vendor.html, Vendor দেখবে admin.html
+    # কনটেন্ট টেমপ্লেট effective_role দিয়ে নির্বাচন (swap)
     template_name = f"my_canteen/dashboard/{effective_role}.html"
 
     ctx = {
         "profile": profile,
         "orders": orders,
         "items": items,
-        "real_role": real_role,           # চাইলে টেমপ্লেটে দরকার হলে ব্যবহার করবে
+        "real_role": real_role,
         "effective_role": effective_role,
         "dashboard_title": dashboard_title,
     }
     return render(request, template_name, ctx)
 
 
-
-# ----------- (optional) Vendor-only view (use UI route) -----------
+# ---------- Optional vendor-only view (unused) ----------
 @login_required
 def vendor_dashboard(request):
     if get_role(request.user) != "vendor":
@@ -532,7 +546,7 @@ def vendor_dashboard(request):
     return render(request, "my_canteen/dashboard/superadmin.html")
 
 
-# ----------- Profile / Settings -----------
+# ---------- Profile / Settings ----------
 @login_required
 def profile_page(request):
     profile = UserProfile.objects.get(user=request.user)
@@ -554,7 +568,7 @@ def settings_page(request):
     return render(request, "my_canteen/settings.html", {"profile": profile})
 
 
-# ----------- Order lifecycle (admin & vendor উভয়েই allowed) -----------
+# ---------- Order lifecycle (vendor & admin) ----------
 @login_required
 def order_accept(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
@@ -640,3 +654,28 @@ def order_mark_paid(request, order_id):
     order.save()
     messages.success(request, f"Order #{order.id} marked as PAID.")
     return redirect("dashboard")
+
+
+# ---------- End-user Smart Cancel ----------
+@login_required
+def user_order_cancel(request, order_id):
+    """
+    End-user (student/faculty/guest) নিজের অর্ডার preparing-এর আগ পর্যন্ত
+    ক্যানসেল করতে পারবে। ক্যানসেল হলে স্টক রিস্টোর করা হবে।
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    if not can_user_cancel(order, request.user):
+        messages.error(request, "Sorry, you can no longer cancel this order.")
+        return redirect("orders")
+
+    # স্টক ফেরত দাও
+    for oi in OrderItem.objects.filter(order=order).select_related("item"):
+        oi.item.stock += oi.quantity
+        oi.item.save(update_fields=["stock"])
+
+    order.status = "cancelled"
+    order.save(update_fields=["status"])
+
+    messages.success(request, f"Order #{order.id} cancelled successfully.")
+    return redirect("orders")

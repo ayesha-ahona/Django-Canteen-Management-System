@@ -70,6 +70,9 @@ urlpatterns = [
     # Vendor Dashboard (superadmin → vendor)
     path('dashboard/vendor/', views.vendor_dashboard, name='vendor_dashboard'),
     path('dashboard/superadmin/', lambda r: redirect('vendor_dashboard'), name='superadmin_legacy'),
+
+    #user order cancel
+    path('orders/<int:order_id>/user-cancel/', views.user_order_cancel, name='user_order_cancel'),
 ]
 
 if settings.DEBUG:
