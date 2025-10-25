@@ -21,6 +21,7 @@
 
 <!-- 🧭 Category Chips -->
 <div class="chip-row">
+  {# All button: drop cat, keep other filters #}
   <a
     href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if min_price %}min_price={{ min_price }}&{% endif %}{% if max_price %}max_price={{ max_price }}&{% endif %}{% if sort %}sort={{ sort }}{% endif %}"
     class="chip {% if not active_cat %}active{% endif %}"
