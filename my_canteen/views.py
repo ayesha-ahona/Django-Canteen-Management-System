@@ -16,7 +16,7 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
-from .models import MenuItem, UserProfile, Order, OrderItem, Review, Payment
+from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, Payment
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm
 
 
@@ -69,20 +69,63 @@ def home(request):
 
 # ---------- Menu ----------
 def menu_page(request):
-    query = request.GET.get("q")
-    min_price = request.GET.get("min_price")
-    max_price = request.GET.get("max_price")
+    # query params
+    q = request.GET.get('q', '').strip()
+    min_price = request.GET.get('min_price') or ''
+    max_price = request.GET.get('max_price') or ''
+    sort = request.GET.get('sort') or ''
+    active_cat = request.GET.get('cat') or ''   # keep as string for template
 
+    # base queryset
     items = MenuItem.objects.filter(is_active=True)
 
-    if query:
-        items = items.filter(Q(name__icontains=query) | Q(description__icontains=query))
+    # category filter
+    if active_cat:
+        try:
+            items = items.filter(category_id=int(active_cat))
+        except ValueError:
+            active_cat = ''  # invalid cat id -> treat as "All"
+
+    # search filter
+    if q:
+        items = items.filter(Q(name__icontains=q) | Q(description__icontains=q))
+
+    # price range
     if min_price:
         items = items.filter(price__gte=min_price)
     if max_price:
         items = items.filter(price__lte=max_price)
 
-    return render(request, "my_canteen/menu.html", {"items": items})
+    # sorting
+    if sort == "price_asc":
+        items = items.order_by("price")
+    elif sort == "price_desc":
+        items = items.order_by("-price")
+    else:
+        items = items.order_by("-is_popular", "name")
+
+    # all categories for chips
+    categories = Category.objects.all().order_by("name")
+
+    # simple recommended block (bottom section)
+    recommended = (
+        MenuItem.objects.filter(is_active=True, is_popular=True)
+        .exclude(id__in=items.values_list("id", flat=True)[:12])
+        [:6]
+    )
+
+    context = {
+        "items": items,
+        "categories": categories,
+        "active_cat": active_cat,  # keep string so template compare works
+        "q": q,
+        "min_price": min_price,
+        "max_price": max_price,
+        "sort": sort,
+        "recommended": recommended,
+    }
+    return render(request, 'my_canteen/menu.html', context)
+
 
 
 # ---------- Item Detail + Reviews ----------
