@@ -71,8 +71,12 @@ urlpatterns = [
     path('dashboard/vendor/', views.vendor_dashboard, name='vendor_dashboard'),
     path('dashboard/superadmin/', lambda r: redirect('vendor_dashboard'), name='superadmin_legacy'),
 
-    #user order cancel
+    # User order cancel
     path('orders/<int:order_id>/user-cancel/', views.user_order_cancel, name='user_order_cancel'),
+
+    # ===== Daily Sales Report (VENDOR ONLY) - নতুন =====
+    path('reports/daily-sales/', views.vendor_daily_sales_report, name='vendor_daily_sales'),
+    path('reports/daily-sales/csv/', views.vendor_daily_sales_report_csv, name='vendor_daily_sales_csv'),
 ]
 
 if settings.DEBUG:

@@ -3,7 +3,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count, Sum, F
 from django.contrib import messages
 from django.http import (
     HttpResponseForbidden,
@@ -15,6 +15,9 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from datetime import datetime
+import csv
+from io import StringIO
 
 from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, Payment
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm
@@ -31,7 +34,7 @@ def get_role(user):
 
 def get_effective_role(real_role: str) -> str:
     """
-    UI/হেডিং-এ real_role দেখাবো, কিন্তু ক্ষমতা/ডেটা effective_role দিয়ে।
+    UI/হেডিং-এ real_role দেখাবো, কিন্তু ক্ষমতা/ডেটা effective_role দিয়ে।
     - admin -> vendor ক্ষমতা
     - vendor -> admin ক্ষমতা
     - অন্যরা (student/faculty/staff/guest) -> আগের মতই
@@ -542,7 +545,7 @@ def dashboard(request):
     real_role = profile.role
     effective_role = get_effective_role(real_role)
 
-    # ডেটা লোডিং effective_role দিয়ে
+    # ডেটা লোডিং effective_role দিয়ে
     if effective_role in ["admin", "vendor"]:
         orders = Order.objects.all().order_by("-created_at")
         items = MenuItem.objects.all()
@@ -555,7 +558,7 @@ def dashboard(request):
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
         items = None
 
-    # হেডিং real_role দিয়ে (UI)
+    # হেডিং real_role দিয়ে (UI)
     title_map = {
         "admin": "🛠️ Admin Dashboard",
         "vendor": "🏪 Vendor Dashboard",
@@ -566,7 +569,7 @@ def dashboard(request):
     }
     dashboard_title = title_map.get(real_role, "Dashboard")
 
-    # কনটেন্ট টেমপ্লেট effective_role দিয়ে নির্বাচন (swap)
+    # কনটেন্ট টেমপ্লেট effective_role দিয়ে নির্বাচন (swap)
     template_name = f"my_canteen/dashboard/{effective_role}.html"
 
     ctx = {
@@ -723,3 +726,110 @@ def user_order_cancel(request, order_id):
 
     messages.success(request, f"Order #{order.id} cancelled successfully.")
     return redirect("orders")
+
+
+# ---------- Daily Sales Report (Vendor Only) ----------
+@login_required
+def vendor_daily_sales_report(request):
+    """Daily sales report - শুধু vendor দেখতে পারবে"""
+    real_role = get_role(request.user)
+    effective_role = get_effective_role(real_role)
+    
+    # vendor ba admin (যার effective_role vendor) দেখতে পারবে
+    if effective_role != "vendor":
+        messages.error(request, "Only vendor can view daily sales report.")
+        return redirect("dashboard")
+    
+    # কোন দিনের report? (default = today)
+    date_str = request.GET.get("date", "")
+    try:
+        if date_str:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        else:
+            target_date = timezone.localdate()
+    except ValueError:
+        target_date = timezone.localdate()
+    
+    # শুধু paid এবং delivered/completed orders
+    orders = (
+        Order.objects.filter(
+            created_at__date=target_date,
+            payment_status="paid",
+            status__in=["delivered", "completed"],
+        )
+        .select_related("user")
+        .order_by("id")
+    )
+    
+    total_orders = orders.count()
+    total_revenue = orders.aggregate(s=Sum("total_price"))["s"] or 0
+    avg_order_value = 0
+    if total_orders:
+        avg_order_value = round(float(total_revenue) / total_orders, 2)
+    
+    # Item-wise sales breakdown
+    items_qs = (
+        OrderItem.objects.filter(order__in=orders)
+        .values("item__id", "item__name")
+        .annotate(
+            qty_sold=Sum("quantity"),
+            line_revenue=Sum(F("quantity") * F("unit_price")),
+        )
+        .order_by("-qty_sold")
+    )
+    
+    context = {
+        "target_date": target_date,
+        "orders": orders,
+        "total_orders": total_orders,
+        "total_revenue": total_revenue,
+        "avg_order_value": avg_order_value,
+        "items_qs": items_qs,
+        "real_role": real_role,
+    }
+    return render(request, "my_canteen/reports/daily_sales.html", context)
+
+
+@login_required
+def vendor_daily_sales_report_csv(request):
+    """CSV export - শুধু vendor"""
+    real_role = get_role(request.user)
+    effective_role = get_effective_role(real_role)
+    
+    if effective_role != "vendor":
+        messages.error(request, "Only vendor can export sales report.")
+        return redirect("dashboard")
+    
+    date_str = request.GET.get("date", "")
+    try:
+        if date_str:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        else:
+            target_date = timezone.localdate()
+    except ValueError:
+        target_date = timezone.localdate()
+    
+    orders = Order.objects.filter(
+        created_at__date=target_date,
+        payment_status="paid",
+        status__in=["delivered", "completed"],
+    ).order_by("id")
+    
+    # CSV generate
+    buf = StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["Order ID", "User", "Total (Tk)", "Payment", "Status", "Placed At"])
+    
+    for o in orders:
+        writer.writerow([
+            o.id, 
+            o.user.username, 
+            o.total_price, 
+            o.payment_status, 
+            o.status, 
+            o.created_at
+        ])
+    
+    resp = HttpResponse(buf.getvalue(), content_type="text/csv")
+    resp["Content-Disposition"] = f'attachment; filename="daily_sales_{target_date}.csv"'
+    return resp
