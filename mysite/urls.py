@@ -41,7 +41,7 @@ urlpatterns = [
     path('orders/<int:order_id>/cancel/', views.order_cancel, name='order_cancel'),
     path('orders/<int:order_id>/paid/', views.order_mark_paid, name='order_mark_paid'),
 
-    # ===== Payment flow (NEW) =====
+    # ===== Payment flow =====
     path('payment/start/<int:order_id>/', views.payment_start, name='payment_start'),
     path('payment/success/', views.payment_success, name='payment_success'),
     path('payment/failed/', views.payment_failed, name='payment_failed'),
@@ -59,8 +59,12 @@ urlpatterns = [
 
     # Auth
     path('signup/', views.signup_page, name='signup'),
-    path('login/', auth_views.LoginView.as_view(template_name='my_canteen/login.html'), name='login'),
+    path('login/', views.CustomLoginView.as_view(), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
+
+    # ✅ Email verification routes
+    path('verify-email/<uidb64>/<token>/', views.verify_email, name='verify_email'),
+    path('resend-verification/', views.resend_verification, name='resend_verification'),
 
     # Dashboard & profile
     path('dashboard/', views.dashboard, name='dashboard'),
@@ -71,7 +75,7 @@ urlpatterns = [
     path('dashboard/vendor/', views.vendor_dashboard, name='vendor_dashboard'),
     path('dashboard/superadmin/', lambda r: redirect('vendor_dashboard'), name='superadmin_legacy'),
 
-    #user order cancel
+    # User order cancel
     path('orders/<int:order_id>/user-cancel/', views.user_order_cancel, name='user_order_cancel'),
 ]
 

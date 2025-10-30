@@ -16,8 +16,119 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
+# ✅ Email verification imports
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.contrib.auth import login
+from django.contrib.auth import views as auth_views
+
 from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, Payment
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm
+
+
+# ========== Email Verification Token ==========
+class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
+    def _make_hash_value(self, user, timestamp):
+        profile = getattr(user, 'userprofile', None)
+        verified = '1' if profile and profile.email_verified else '0'
+        return f"{user.pk}{timestamp}{user.is_active}{verified}"
+
+email_token_generator = EmailVerificationTokenGenerator()
+
+
+# ========== Send Verification Email ==========
+def send_verification_email(request, user):
+    uid = urlsafe_base64_encode(force_bytes(user.pk))
+    token = email_token_generator.make_token(user)
+    verify_url = request.build_absolute_uri(
+        reverse('verify_email', kwargs={'uidb64': uid, 'token': token})
+    )
+
+    subject = "Verify your email - Canteen"
+    message = f"Hello {user.username},\n\nPlease verify your account by clicking the link below:\n{verify_url}\n\nThanks!"
+    send_mail(subject, message, None, [user.email])
+
+
+# ========== Custom Login View ==========
+class CustomLoginView(auth_views.LoginView):
+    template_name = 'my_canteen/login.html'
+
+    def form_valid(self, form):
+        user = form.get_user()
+        if not user.userprofile.email_verified:
+            messages.error(self.request, "⚠️ Please verify your email before login.")
+            return redirect('login')
+        return super().form_valid(form)
+
+
+# ========== Signup ==========
+def signup_page(request):
+    if request.method == "POST":
+        form = CustomSignupForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit=False)
+            user.email = form.cleaned_data['email']
+            user.is_active = True
+            user.save()
+
+            role = form.cleaned_data.get('role', 'guest')
+            phone = form.cleaned_data.get('phone')
+            
+            # প্রথম ইউজারকে admin
+            if User.objects.count() == 1:
+                role = "admin"
+            
+            profile = user.userprofile
+            valid_roles = ["admin", "student", "faculty", "staff", "vendor", "guest"]
+            profile.role = role if role in valid_roles else "guest"
+            profile.phone = phone
+            profile.email_verified = False
+            profile.save()
+
+            # ✅ Send verification email
+            send_verification_email(request, user)
+            messages.success(request, "✅ Account created! We sent a verification link to your email.")
+            return redirect('login')
+    else:
+        form = CustomSignupForm()
+
+    return render(request, 'my_canteen/signup.html', {'form': form})
+
+
+# ========== Verify Email ==========
+def verify_email(request, uidb64, token):
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+
+    if user and email_token_generator.check_token(user, token):
+        profile = user.userprofile
+        profile.email_verified = True
+        profile.save()
+        login(request, user)
+        messages.success(request, "🎉 Email verified! You are now logged in.")
+        return redirect('dashboard')
+    else:
+        messages.error(request, "Invalid or expired verification link.")
+        return redirect('login')
+
+
+# ========== Resend Verification ==========
+@login_required
+def resend_verification(request):
+    profile = request.user.userprofile
+    if profile.email_verified:
+        messages.info(request, "Your email is already verified.")
+        return redirect('dashboard')
+    
+    send_verification_email(request, request.user)
+    messages.success(request, "Verification link sent again to your email.")
+    return redirect('login')
 
 
 # ---------- Helpers ----------
@@ -31,7 +142,7 @@ def get_role(user):
 
 def get_effective_role(real_role: str) -> str:
     """
-    UI/হেডিং-এ real_role দেখাবো, কিন্তু ক্ষমতা/ডেটা effective_role দিয়ে।
+    UI/হেডিং-এ real_role দেখাবো, কিন্তু ক্ষমতা/ডেটা effective_role দিয়ে।
     - admin -> vendor ক্ষমতা
     - vendor -> admin ক্ষমতা
     - অন্যরা (student/faculty/staff/guest) -> আগের মতই
@@ -117,7 +228,7 @@ def menu_page(request):
     context = {
         "items": items,
         "categories": categories,
-        "active_cat": active_cat,  # keep string so template compare works
+        "active_cat": active_cat,
         "q": q,
         "min_price": min_price,
         "max_price": max_price,
@@ -125,7 +236,6 @@ def menu_page(request):
         "recommended": recommended,
     }
     return render(request, 'my_canteen/menu.html', context)
-
 
 
 # ---------- Item Detail + Reviews ----------
@@ -498,38 +608,6 @@ def contact_anchor(request):
     return HttpResponseRedirect(f"{reverse('home')}#contact")
 
 
-# ---------- Signup ----------
-def signup_page(request):
-    if request.method == "POST":
-        form = CustomSignupForm(request.POST)
-        if form.is_valid():
-            user = form.save(commit=False)
-            user.email = form.cleaned_data.get("email")
-            user.save()
-
-            role = form.cleaned_data.get("role", "guest")
-            phone = form.cleaned_data.get("phone")
-
-            # প্রথম ইউজারকে admin
-            if User.objects.count() == 1:
-                role = "admin"
-
-            profile = user.userprofile
-            valid_roles = ["admin", "student", "faculty", "staff", "vendor", "guest"]
-            profile.role = role if role in valid_roles else "guest"
-            profile.phone = phone
-            profile.save()
-
-            messages.success(
-                request, f"Account created successfully as {profile.role}! Please login."
-            )
-            return redirect("login")
-    else:
-        form = CustomSignupForm()
-
-    return render(request, "my_canteen/signup.html", {"form": form})
-
-
 # ---------- Dashboard (admin <-> vendor swap) ----------
 @login_required
 def dashboard(request):
@@ -542,7 +620,7 @@ def dashboard(request):
     real_role = profile.role
     effective_role = get_effective_role(real_role)
 
-    # ডেটা লোডিং effective_role দিয়ে
+    # ডেটা লোডিং effective_role দিয়ে
     if effective_role in ["admin", "vendor"]:
         orders = Order.objects.all().order_by("-created_at")
         items = MenuItem.objects.all()
@@ -555,7 +633,7 @@ def dashboard(request):
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
         items = None
 
-    # হেডিং real_role দিয়ে (UI)
+    # হেডিং real_role দিয়ে (UI)
     title_map = {
         "admin": "🛠️ Admin Dashboard",
         "vendor": "🏪 Vendor Dashboard",
@@ -566,7 +644,7 @@ def dashboard(request):
     }
     dashboard_title = title_map.get(real_role, "Dashboard")
 
-    # কনটেন্ট টেমপ্লেট effective_role দিয়ে নির্বাচন (swap)
+    # কনটেন্ট টেমপ্লেট effective_role দিয়ে নির্বাচন (swap)
     template_name = f"my_canteen/dashboard/{effective_role}.html"
 
     ctx = {

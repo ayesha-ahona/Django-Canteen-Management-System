@@ -10,7 +10,6 @@ from django.dispatch import receiver
 # ---------------------------
 class UserProfile(models.Model):
     ROLE_CHOICES = [
-        # ('superadmin', 'Super Administrator'),   # ⛔️ removed: এখন vendor-ই full access
         ('admin', 'Admin / Manager'),
         ('student', 'Student'),
         ('faculty', 'Faculty'),
@@ -21,6 +20,7 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='guest')
     phone = models.CharField(max_length=15, blank=True, null=True)
+    email_verified = models.BooleanField(default=False)  # ✅ নতুন ফিল্ড
 
     def __str__(self):
         return f"{self.user.username} ({self.role})"
@@ -88,9 +88,12 @@ class Order(models.Model):
         ('cancelled', 'Cancelled'),
     ]
     PAYMENT_STATUS_CHOICES = [('unpaid', 'Unpaid'), ('paid', 'Paid'),]
-    PAYMENT_METHOD_CHOICES = [('cash', 'Cash'),('mock_card', 'Mock Card'),
+    PAYMENT_METHOD_CHOICES = [
+        ('cash', 'Cash'),
+        ('mock_card', 'Mock Card'),
         ('stripe', 'Stripe'),
-        ('sslcommerz', 'SSLCommerz'),]  # ভবিষ্যতে 'card', 'online' যোগ করা হবে
+        ('sslcommerz', 'SSLCommerz'),
+    ]
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     total_price = models.DecimalField(max_digits=8, decimal_places=2)
@@ -103,7 +106,6 @@ class Order(models.Model):
     def __str__(self):
         return f"Order {self.id} by {self.user.username}"
 
-    # optional helper—template/view এ কাজে লাগতে পারে
     @property
     def is_paid(self) -> bool:
         return self.payment_status == 'paid'
@@ -160,10 +162,10 @@ class Review(models.Model):
     rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES)
     comment = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)  # useful for edits
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('user', 'item')  # প্রতি user প্রতি item একটাই রিভিউ
+        unique_together = ('user', 'item')
         ordering = ('-created_at',)
 
     def __str__(self):

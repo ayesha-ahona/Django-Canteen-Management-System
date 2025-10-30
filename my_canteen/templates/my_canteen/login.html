@@ -1,12 +1,20 @@
 {% extends "my_canteen/base.html" %}
-
 {% block content %}
-<h2>Login</h2>
-<form method="post">
+<div class="container" style="max-width:400px;margin-top:40px;">
+  <h2>Login</h2>
+  <form method="post">
     {% csrf_token %}
     {{ form.as_p }}
     <button type="submit">Login</button>
-</form>
+  </form>
 
-<p>Don't have an account? <a href="/signup/">Signup here</a></p>
+  <p>Don't have an account? <a href="{% url 'signup' %}">Sign up</a></p>
+
+  {% if user.is_authenticated and not user.userprofile.email_verified %}
+    <p>
+      Didn’t get the verification email?
+      <a href="{% url 'resend_verification' %}">Resend Verification</a>
+    </p>
+  {% endif %}
+</div>
 {% endblock %}
