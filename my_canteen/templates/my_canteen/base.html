@@ -2,16 +2,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>UAP CanteenX</title>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{% block title %}UAP CanteenX{% endblock %}</title>
 
   <!-- Main CSS -->
-  <link rel="stylesheet" href="{% static 'my_canteen/css/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'my_canteen/css/styles.css' %}"/>
+
+  {% block extra_head %}{% endblock %}
 </head>
 <body>
 
-  <!-- ================= NAVBAR ================= -->
+  <!-- ============ NAVBAR ============ -->
   <nav class="navbar">
     <div class="logo">🍴 UAP CanteenX</div>
 
@@ -36,8 +38,6 @@
       </li>
 
       <li><a href="{% url 'orders' %}">Orders</a></li>
-
-      <!-- About/Contact (তোমার urls অনুযায়ী এগুলো আলাদা পেজ/অ্যাঙ্কর—তুমি যেটা সেট করেছো সেটাই হ্যান্ডেল হবে) -->
       <li><a href="{% url 'about' %}">About</a></li>
       <li><a href="{% url 'contact' %}">Contact</a></li>
 
@@ -63,27 +63,33 @@
         </li>
       {% else %}
         <li><a href="{% url 'login' %}">Login</a></li>
-        <li><a class="btn btn-primary" href="{% url 'signup' %}">Signup</a></li>
+        <!-- শুধু .btn রাখলাম যাতে height/spacing সব লিঙ্কের সাথে match করে -->
+        <li><a class="btn" href="{% url 'signup' %}">Signup</a></li>
       {% endif %}
     </ul>
   </nav>
 
-  <!-- ================= DJANGO MESSAGES ================= -->
+  <!-- ============ DJANGO MESSAGES ============ -->
   {% if messages %}
-    <div class="container mt-2">
+    <div class="container">
       {% for message in messages %}
-        {# Django message.tags হবে: success, error, warning, info #}
-        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+        <div class="alert
+          {% if message.tags == 'success' %}alert-success
+          {% elif message.tags == 'error' %}alert-error
+          {% elif message.tags == 'warning' %}alert-warning
+          {% else %}alert-info{% endif %}">
+          {{ message }}
+        </div>
       {% endfor %}
     </div>
   {% endif %}
 
-  <!-- ================= MAIN CONTENT ================= -->
+  <!-- ============ MAIN CONTENT ============ -->
   <main class="container">
     {% block content %}{% endblock %}
   </main>
 
-  <!-- ================= FOOTER (Only on Home) ================= -->
+  <!-- ============ FOOTER (Home only) ============ -->
   {% if request.resolver_match.url_name == 'home' %}
   <footer class="site-footer">
     <div class="footer-grid">
@@ -97,7 +103,7 @@
         </p>
         <ul class="about-points">
           <li>✅ Healthy & Hygienic</li>
-          <li>⏱ Fast Delivery to counters</li>
+          <li>⏱ Fast delivery to counters</li>
           <li>⭐ Student-friendly pricing</li>
         </ul>
       </section>
@@ -110,8 +116,7 @@
           <li>📞 +880 1304-092657</li>
           <li>✉️ support@canteenx.example</li>
         </ul>
-
-        <!-- mini contact form (static demo) -->
+        <!-- demo mini form -->
         <form class="mini-contact" method="post" action="#">
           <input type="text" placeholder="Your name" required>
           <input type="email" placeholder="Your email" required>
@@ -136,7 +141,7 @@
     </div>
 
     <div class="footer-bottom">
-      <span>© {{ now|date:"Y" }} UAP CanteenX • All rights reserved.</span>
+      <span>© {% now "Y" %} UAP CanteenX • All rights reserved.</span>
       <nav class="footer-nav">
         <a href="{% url 'about' %}">About</a>
         <a href="{% url 'contact' %}">Contact</a>
@@ -146,5 +151,6 @@
   </footer>
   {% endif %}
 
+  {% block extra_js %}{% endblock %}
 </body>
 </html>
