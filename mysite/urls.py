@@ -1,3 +1,5 @@
+# my_project/urls.py
+
 from django.contrib import admin
 from django.urls import path
 from my_canteen import views
@@ -13,10 +15,17 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('menu/', views.menu_page, name='menu'),
 
-    # Item detail + feedback
+    # --- Item detail + feedback (ফিডব্যাক ও রেটিং সিস্টেম) ---
+    # ✅ এই URL-টি একটি আইটেমের বিস্তারিত পাতা দেখায় (যেখানে রিভিউগুলো লিস্ট করা থাকে)
     path('item/<int:item_id>/', views.item_detail, name='item_detail'),
+    
+    # ✅ এই URL-টি একটি নতুন রিভিউ সাবমিট করার জন্য (POST রিকোয়েস্ট)
     path('item/<int:item_id>/review/', views.submit_review, name='submit_review'),
+    
+    # ✅ এই URL-টি একজন ইউজারের নিজের রিভিউ এডিট করার পাতা দেখায় (GET) এবং সাবমিট নেয় (POST)
     path('item/<int:item_id>/review/edit/', views.edit_review, name='edit_review'),
+    
+    # ✅ এই URL-টি একজন ইউজারের নিজের রিভিউ ডিলিট করার জন্য (POST রিকোয়েস্ট)
     path('item/<int:item_id>/review/delete/', views.delete_review, name='delete_review'),
 
     # Cart + Checkout

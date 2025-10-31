@@ -185,7 +185,7 @@ def menu_page(request):
     min_price = request.GET.get('min_price') or ''
     max_price = request.GET.get('max_price') or ''
     sort = request.GET.get('sort') or ''
-    active_cat = request.GET.get('cat') or ''   # keep as string for template
+    active_cat = request.GET.get('cat') or ''  # keep as string for template
 
     # base queryset
     items = MenuItem.objects.filter(is_active=True)
@@ -238,34 +238,43 @@ def menu_page(request):
     return render(request, 'my_canteen/menu.html', context)
 
 
-# ---------- Item Detail + Reviews ----------
+# ---------- Item Detail + Reviews (ফিডব্যাক ও রেটিং সিস্টেম) ----------
 def item_detail(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
+    # ✅ এই আইটেমের সব রিভিউ এবং গড় রেটিং লোড করুন
     reviews = Review.objects.filter(item=item).select_related("user").order_by("-created_at")
     agg = reviews.aggregate(avg=Avg("rating"), cnt=Count("id"))
     avg_rating = round(agg["avg"] or 0, 1)
     total_reviews = agg["cnt"] or 0
 
     can_review, already, form = False, False, None
+    
+    # ✅ বর্তমান ইউজার রিভিউ দিতে পারবে কিনা তা চেক করুন
     if request.user.is_authenticated:
+        # 1. ইউজার কি আইটেমটি কিনেছে এবং ডেলিভারি পেয়েছে?
         purchased = OrderItem.objects.filter(
             order__user=request.user,
-            order__status__in=["delivered", "completed"],
+            order__status__in=["delivered", "completed"],  # ডেলিভারি বা কমপ্লিট অর্ডারের ক্ষেত্রে
             item=item,
         ).exists()
+        
+        # 2. ইউজার কি ইতোমধ্যেই রিভিউ দিয়ে দিয়েছে?
         already = Review.objects.filter(user=request.user, item=item).exists()
+        
+        # 3. যদি কিনে থাকে এবং আগে রিভিউ না দিয়ে থাকে, তবেই রিভিউ দিতে পারবে
         can_review = purchased and not already
+        
         if can_review:
-            form = ReviewForm()
+            form = ReviewForm()  # রিভিউ দেওয়ার জন্য ফর্ম প্রস্তুত করুন
 
     context = {
         "item": item,
         "reviews": reviews,
         "avg_rating": avg_rating,
         "total_reviews": total_reviews,
-        "can_review": can_review,
-        "already": already,
+        "can_review": can_review,  # টেমপ্লেটে ফর্ম দেখানোর জন্য
+        "already": already,      # "You already reviewed" দেখানোর জন্য
         "form": form,
     }
     return render(request, "my_canteen/item_detail.html", context)
@@ -275,6 +284,8 @@ def item_detail(request, item_id):
 def submit_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
+    # ✅ সিকিউরিটি চেক: ইউজার রিভিউ দেওয়ার উপযুক্ত কিনা তা আবার চেক করুন
+    # 1. আইটেমটি কি কিনেছিল?
     purchased = OrderItem.objects.filter(
         order__user=request.user,
         order__status__in=["delivered", "completed"],
@@ -284,10 +295,12 @@ def submit_review(request, item_id):
         messages.error(request, "You can review only after you received the item.")
         return redirect("item_detail", item_id=item.id)
 
+    # 2. ইতোমধ্যেই রিভিউ দিয়েছে কিনা?
     if Review.objects.filter(user=request.user, item=item).exists():
         messages.info(request, "You already reviewed this item.")
         return redirect("item_detail", item_id=item.id)
 
+    # ✅ যদি সব ঠিক থাকে এবং POST রিকোয়েস্ট হয়, তবে ফর্ম প্রসেস করুন
     if request.method == "POST":
         form = ReviewForm(request.POST)
         if form.is_valid():
@@ -306,15 +319,18 @@ def submit_review(request, item_id):
 @login_required
 def edit_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+    # ✅ ইউজারের নিজের রিভিউটি খুঁজে বের করুন
     review = get_object_or_404(Review, item=item, user=request.user)
 
     if request.method == "POST":
+        # ✅ POST ডেটা দিয়ে ফর্মটি লোড করুন (instance=review মানে হলো এটি নতুন নয়, এডিট হচ্ছে)
         form = ReviewForm(request.POST, instance=review)
         if form.is_valid():
             form.save()
             messages.success(request, "Your review has been updated.")
             return redirect("item_detail", item_id=item.id)
     else:
+        # ✅ GET রিকোয়েস্টে, আগের রিভিউটি দিয়ে ফর্ম দেখান
         form = ReviewForm(instance=review)
 
     return render(request, "my_canteen/review_edit.html", {"item": item, "form": form})
@@ -323,13 +339,16 @@ def edit_review(request, item_id):
 @login_required
 def delete_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
+    # ✅ ইউজারের নিজের রিভিউটি খুঁজে বের করুন
     review = get_object_or_404(Review, item=item, user=request.user)
 
+    # ✅ শুধুমাত্র POST রিকোয়েস্টেই ডিলিট হবে
     if request.method == "POST":
         review.delete()
         messages.success(request, "Your review has been deleted.")
         return redirect("item_detail", item_id=item.id)
 
+    # GET রিকোয়েস্ট অ্যালাউ করা হবে না
     return HttpResponseForbidden("Invalid request")
 
 
