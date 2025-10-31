@@ -57,23 +57,27 @@ a {
 
 /* Button-like links */
 .nav-links a,
-.link-like {
+.link-like,
+.btn-nav {
     color: #fff;
     font-weight: 500;
     font-size: 16px;
-    padding: 6px 14px;
-    border-radius: 6px;
-    transition: all 0.2s ease;
-    line-height: 1;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    height: 38px;
+    padding: 0 14px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    text-decoration: none;
 }
 
 /* Hover = signup–style shadow */
 .nav-links a:hover,
-.link-like:hover {
+.link-like:hover,
+.btn-nav:hover {
     background-color: #b71c1c;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
     transform: translateY(-1px);
     text-decoration: none;
 }
@@ -83,6 +87,17 @@ a {
     background: transparent;
     border: 0;
     cursor: pointer;
+}
+
+/* Signup special highlight */
+.btn-nav.highlight {
+    background: #d32f2f;
+    font-weight: 600;
+}
+
+.btn-nav.highlight:hover {
+    background: #b71c1c;
+    transform: translateY(-1px);
 }
 
 /* Cart pill */
