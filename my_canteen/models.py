@@ -87,7 +87,7 @@ class Order(models.Model):
         ('completed', 'Completed'),
         ('cancelled', 'Cancelled'),
     ]
-    PAYMENT_STATUS_CHOICES = [('unpaid', 'Unpaid'), ('paid', 'Paid'),]
+    PAYMENT_STATUS_CHOICES = [('unpaid', 'Unpaid'), ('paid', 'Paid')]
     PAYMENT_METHOD_CHOICES = [
         ('cash', 'Cash'),
         ('mock_card', 'Mock Card'),
@@ -152,15 +152,17 @@ class OrderItem(models.Model):
 
 
 # ---------------------------
-# Reviews
+# Reviews & Feedback
 # ---------------------------
 class Review(models.Model):
-    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]  # 1..5
+    RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]  # 1..5 stars
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE)
-    rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES)
-    comment = models.TextField(blank=True)
+    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='reviews')
+    rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES, blank=True, null=True)
+    feedback_title = models.CharField(max_length=100, blank=True, null=True)  # ✅ Optional title
+    comment = models.TextField(blank=True, null=True)  # ✅ Feedback text
+    is_public = models.BooleanField(default=True)  # ✅ Admin control (show/hide)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -169,12 +171,13 @@ class Review(models.Model):
         ordering = ('-created_at',)
 
     def __str__(self):
-        return f"{self.item.name} - {self.user.username} ({self.rating})"
+        rating_part = f"{self.rating}★" if self.rating else "No rating"
+        return f"{self.item.name} - {self.user.username} ({rating_part})"
 
 
 # ✅ Recalculate cached rating on create/update/delete
 def _recalc_item_rating(item: MenuItem):
-    agg = Review.objects.filter(item=item).aggregate(
+    agg = Review.objects.filter(item=item, rating__isnull=False).aggregate(
         avg=Avg('rating'),
         cnt=Count('id'),
     )

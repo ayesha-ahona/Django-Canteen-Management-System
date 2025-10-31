@@ -14,6 +14,7 @@
     <h2>{{ item.name }}</h2>
     <div class="item-price">{{ item.price }} Tk</div>
 
+    {# --- গড় রেটিং এবং মোট রিভিউ সংখ্যা দেখানো --- #}
     <div class="item-rating">
       <span class="stars" title="{{ avg_rating }}/5">
         {% for i in "12345" %}
@@ -30,6 +31,7 @@
 
     <div class="item-description">{{ item.description }}</div>
 
+    {# --- স্টক না থাকলে 'Add to Cart' বাটন হাইড করা --- #}
     {% if item.stock > 0 %}
       <a href="{% url 'add_to_cart' item.id %}" class="btn">Add to Cart</a>
     {% else %}
@@ -41,6 +43,7 @@
 <div class="feedback-section">
   <h3>Customer Feedback</h3>
 
+  {# --- সব রিভিউ লুপ করে দেখানো --- #}
   {% if reviews %}
     {% for r in reviews %}
       <div class="review-card">
@@ -61,27 +64,38 @@
     <p class="muted">No reviews yet. Be the first to review!</p>
   {% endif %}
 
+  {# --- রিভিউ ফর্ম দেখানোর লজিক --- #}
   {% if user.is_authenticated %}
+    
+    {# --- কন্ডিশন ১: ইউজার রিভিউ দিতে পারবে (কিনেছে কিন্তু রিভিউ দেয়নি) --- #}
     {% if can_review %}
       <hr class="divider">
+      {# 'submit_review' URL-এ ফর্ম সাবমিট করা #}
       <form method="post" action="{% url 'submit_review' item.id %}" class="review-form card">
         {% csrf_token %}
         <div class="stars-input">{{ form.rating }}</div>
         <div class="textarea">{{ form.comment }}</div>
         <button class="btn btn-primary" type="submit">Submit Review</button>
       </form>
+    
+    {# --- কন্ডিশন ২: ইউজার ইতোমধ্যে রিভিউ দিয়েছে --- #}
     {% elif already %}
       <div class="note">
         You already reviewed this item.
+        {# 'edit_review' এবং 'delete_review' URL-এ লিংক করা #}
         <a class="link" href="{% url 'edit_review' item.id %}">Edit</a>
         <form method="post" action="{% url 'delete_review' item.id %}" class="inline">
           {% csrf_token %}
           <button type="submit" class="link link--danger">Delete</button>
         </form>
       </div>
+    
+    {# --- কন্ডিশন ৩: ইউজার লগইন করা কিন্তু আইটেমটি কেনেনি বা ডেলিভারি পায়নি --- #}
     {% else %}
       <div class="note">You can review after your order is delivered.</div>
     {% endif %}
+  
+  {# --- কন্ডিশন ৪: ইউজার লগইন করা নেই --- #}
   {% else %}
     <div class="note">Please <a href="{% url 'login' %}?next={{ request.path }}">login</a> to review.</div>
   {% endif %}
