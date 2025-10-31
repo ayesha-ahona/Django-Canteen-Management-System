@@ -3,23 +3,24 @@
 
 <h2>🍽️ Our Menu</h2>
 
-<!-- 🔎 Search + Filters -->
 <form method="get" class="search-filter-form">
   <input type="text" name="q" placeholder="Search food..." value="{{ q }}">
   <input type="number" name="min_price" placeholder="Min Price" value="{{ min_price }}">
   <input type="number" name="max_price" placeholder="Max Price" value="{{ max_price }}">
+  
   <select name="sort">
-    <option value="">Sort</option>
+    <option value="">Sort by</option>
+    <option value="rating_desc" {% if sort == "rating_desc" %}selected{% endif %}>Rating High → Low</option>
     <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>Price Low → High</option>
     <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>Price High → Low</option>
   </select>
+  
   {% if active_cat %}
     <input type="hidden" name="cat" value="{{ active_cat }}">
   {% endif %}
   <button type="submit">Apply</button>
 </form>
 
-<!-- 🧭 Category Chips -->
 <div class="chip-row">
   {# All button: drop cat, keep other filters #}
   <a
@@ -35,7 +36,6 @@
   {% endfor %}
 </div>
 
-<!-- 🧾 Items Grid -->
 <div class="card-grid">
   {% for item in items %}
     <div class="card">
@@ -57,14 +57,18 @@
 
       <div class="card-meta">
         <span class="price"><strong>{{ item.price }} Tk</strong></span>
+        
         {% if item.rating_avg or item.rating_count %}
-          <span class="stars" title="{{ item.rating_avg|default:0 }}/5">
+          <span class="stars" title="{{ item.rating_avg|default:0|floatformat:1 }}/5">
             {% for i in "12345" %}
-              {% if item.rating_avg and forloop.counter <= item.rating_avg|floatformat:0 %}
+              
+              {# ✅ আপডেটেড: |floatformat:0 ফিল্টারটি এখান থেকে সরানো হয়েছে #}
+              {% if item.rating_avg and forloop.counter <= item.rating_avg %}
                 <span class="star filled">★</span>
               {% else %}
                 <span class="star">☆</span>
               {% endif %}
+
             {% endfor %}
             {% if item.rating_avg %}<span class="avg">{{ item.rating_avg|floatformat:1 }}</span>{% endif %}
             {% if item.rating_count %}<span class="count">({{ item.rating_count }})</span>{% endif %}
