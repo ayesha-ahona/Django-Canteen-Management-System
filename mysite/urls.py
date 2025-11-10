@@ -86,7 +86,13 @@ urlpatterns = [
 
     # User order cancel
     path('orders/<int:order_id>/user-cancel/', views.user_order_cancel, name='user_order_cancel'),
-]
 
+    # ===== VENDOR CRUD =====
+    path('vendor/items/', views.vendor_item_list, name='vendor_item_list'),
+    path('vendor/items/new/', views.vendor_item_create, name='vendor_item_create'),
+    path('vendor/items/<int:pk>/edit/', views.vendor_item_edit, name='vendor_item_edit'),
+    path('vendor/items/<int:pk>/delete/', views.vendor_item_delete, name='vendor_item_delete'),
+    path('vendor/items/<int:pk>/toggle/', views.vendor_item_toggle_active, name='vendor_item_toggle_active'),
+]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

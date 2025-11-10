@@ -44,7 +44,12 @@
   </table>
 </div>
 
-<div id="menu" class="tab-content"><h3>Menu Management</h3><p>Use admin panel to add/update items.</p></div>
+<div id="menu" class="tab-content">
+  <h3>Menu Management</h3>
+  <a class="btn" href="{% url 'vendor_item_list' %}">Manage Menu Items</a>
+  <p>Use admin panel to add/update items.</p>
+</div>
+
 <div id="stock" class="tab-content"><h3>Stock Update</h3><p>Update item stock from admin.</p></div>
 <div id="reports" class="tab-content"><h3>Reports</h3><p>Coming soon.</p></div>
 

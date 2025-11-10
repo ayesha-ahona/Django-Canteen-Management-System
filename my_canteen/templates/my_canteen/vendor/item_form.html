@@ -1,0 +1,29 @@
+{% extends "my_canteen/base.html" %}
+{% block content %}
+<h2>{% if mode == "edit" %}Edit{% else %}Add New{% endif %} Menu Item</h2>
+
+<form method="post" enctype="multipart/form-data" class="settings-form" style="max-width:620px;">
+  {% csrf_token %}
+  {{ form.non_field_errors }}
+
+  <label>Name</label> {{ form.name }}
+  <label>Category</label> {{ form.category }}
+  <label>Price</label> {{ form.price }}
+  <label>Stock</label> {{ form.stock }}
+  <label>Description</label> {{ form.description }}
+  <label>Image</label> {{ form.image }}
+  {% if mode == "edit" and item and item.image %}
+    <img src="{{ item.image.url }}" style="max-width:180px;margin-top:6px;border-radius:6px;">
+  {% endif %}
+
+  <div style="display:flex; gap:16px; align-items:center; margin-top:10px;">
+    <label style="display:flex; gap:8px; align-items:center;">{{ form.is_active }} Active</label>
+    <label style="display:flex; gap:8px; align-items:center;">{{ form.is_popular }} Popular</label>
+  </div>
+
+  <div style="margin-top:12px;">
+    <button class="btn" type="submit">Save</button>
+    <a class="btn btn-soft" href="{% url 'vendor_item_list' %}">Cancel</a>
+  </div>
+</form>
+{% endblock %}

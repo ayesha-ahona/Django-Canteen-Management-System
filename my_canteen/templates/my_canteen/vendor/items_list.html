@@ -1,0 +1,54 @@
+{% extends "my_canteen/base.html" %}
+{% block content %}
+<h2>Manage Menu Items</h2>
+
+<form method="get" class="search-filter-form" style="margin-bottom:14px;">
+  <input type="text" name="q" value="{{ q }}" placeholder="Search item name/description">
+  <button class="btn" type="submit">Search</button>
+  <a class="btn btn-soft" href="{% url 'vendor_item_create' %}">+ Add New Item</a>
+</form>
+
+<table class="orders-table pretty">
+  <thead>
+    <tr>
+      <th>#</th><th>Item</th><th>Category</th><th>Price</th><th>Stock</th><th>Status</th><th class="actions-col">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for it in items %}
+    <tr>
+      <td>{{ forloop.counter0|add:items.start_index }}</td>
+      <td class="when">
+        <div class="order-line"><span class="dot"></span>{{ it.name }}</div>
+        <div class="sub">{{ it.description|default:"-"|truncatechars:80 }}</div>
+      </td>
+      <td>{{ it.category.name }}</td>
+      <td>{{ it.price }} Tk</td>
+      <td>
+        {% if it.stock|default:0 > 0 %}
+          <span class="badge success">In Stock ({{ it.stock }})</span>
+        {% else %}
+          <span class="badge danger">Out</span>
+        {% endif %}
+      </td>
+      <td>{% if it.is_active %}<span class="badge primary">Active</span>{% else %}<span class="badge gray">Inactive</span>{% endif %}</td>
+      <td class="actions-col">
+        <a class="btn btn-soft" href="{% url 'vendor_item_edit' it.pk %}">Edit</a>
+        <a class="btn btn-soft-danger" href="{% url 'vendor_item_delete' it.pk %}">Delete</a>
+        <a class="btn" href="{% url 'vendor_item_toggle_active' it.pk %}">{% if it.is_active %}Deactivate{% else %}Activate{% endif %}</a>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="7" style="text-align:center;">No items found.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+{% if items.paginator.num_pages > 1 %}
+  <div style="margin-top:12px;">
+    {% if items.has_previous %}<a class="btn btn-soft" href="?q={{ q }}&page={{ items.previous_page_number }}">Prev</a>{% endif %}
+    <span class="badge info">Page {{ items.number }} / {{ items.paginator.num_pages }}</span>
+    {% if items.has_next %}<a class="btn btn-soft" href="?q={{ q }}&page={{ items.next_page_number }}">Next</a>{% endif %}
+  </div>
+{% endif %}
+{% endblock %}

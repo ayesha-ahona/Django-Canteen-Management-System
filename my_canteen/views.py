@@ -24,9 +24,9 @@ from django.template.loader import render_to_string
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
-
+from django.core.paginator import Paginator
 from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, Payment
-from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm
+from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm, MenuItemForm
 
 
 # ========== Email Verification Token ==========
@@ -820,3 +820,78 @@ def user_order_cancel(request, order_id):
 
     messages.success(request, f"Order #{order.id} cancelled successfully.")
     return redirect("orders")
+
+
+# ---------- Vendor CRUD for Menu Items ----------
+
+@login_required
+def vendor_item_list(request):
+    if not require_roles(request.user, ["vendor", "admin"]):
+        messages.error(request, "You are not authorized to view this page.")
+        return redirect("home")
+
+    q = request.GET.get("q", "").strip()
+    qs = MenuItem.objects.all().order_by("-is_active", "name")
+    if q:
+        qs = qs.filter(Q(name_icontains=q) | Q(description_icontains=q))
+
+    items = Paginator(qs, 10).get_page(request.GET.get("page"))
+    return render(request, "my_canteen/vendor/items_list.html", {"items": items, "q": q})
+
+@login_required
+def vendor_item_create(request):
+    if not require_roles(request.user, ["vendor", "admin"]):
+        messages.error(request, "You are not authorized to add items.")
+        return redirect("home")
+
+    if request.method == "POST":
+        form = MenuItemForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "✅ New menu item created successfully!")
+            return redirect("vendor_item_list")
+    else:
+        form = MenuItemForm()
+    return render(request, "my_canteen/vendor/item_form.html", {"form": form, "mode": "create"})
+
+@login_required
+def vendor_item_edit(request, pk):
+    if not require_roles(request.user, ["vendor", "admin"]):
+        messages.error(request, "You are not authorized to edit items.")
+        return redirect("home")
+
+    item = get_object_or_404(MenuItem, pk=pk)
+    if request.method == "POST":
+        form = MenuItemForm(request.POST, request.FILES, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f"✅ '{item.name}' updated successfully!")
+            return redirect("vendor_item_list")
+    else:
+        form = MenuItemForm(instance=item)
+    return render(request, "my_canteen/vendor/item_form.html", {"form": form, "mode": "edit", "item": item})
+
+@login_required
+def vendor_item_delete(request, pk):
+    if not require_roles(request.user, ["vendor", "admin"]):
+        messages.error(request, "You are not authorized to delete items.")
+        return redirect("home")
+
+    item = get_object_or_404(MenuItem, pk=pk)
+    if request.method == "POST":
+        item.delete()
+        messages.info(request, f"🗑️ '{item.name}' deleted successfully.")
+        return redirect("vendor_item_list")
+    return render(request, "my_canteen/vendor/item_confirm_delete.html", {"item": item})
+
+@login_required
+def vendor_item_toggle_active(request, pk):
+    if not require_roles(request.user, ["vendor", "admin"]):
+        messages.error(request, "Not authorized.")
+        return redirect("home")
+
+    item = get_object_or_404(MenuItem, pk=pk)
+    item.is_active = not item.is_active
+    item.save(update_fields=["is_active"])
+    messages.success(request, f"'{item.name}' has been {'activated ✅' if item.is_active else 'deactivated ❌'}.")
+    return redirect("vendor_item_list")
