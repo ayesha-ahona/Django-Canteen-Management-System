@@ -2,8 +2,8 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from .models import Review, Payment, MenuItem
 
-from .models import Review, Payment
 
 
 # ------------------------------------------------
@@ -159,3 +159,21 @@ class CheckoutPaymentForm(forms.Form):
             if not cvc.isdigit() or not (3 <= len(cvc) <= 4):
                 raise ValidationError("CVC must be 3 or 4 digits.")
         return cleaned_data
+
+
+# ------------------------------------------------
+# 🍽️ Menu Item Management Form (Admin/Vendor Side)
+# -----------------------------------------------
+class MenuItemForm(forms.ModelForm):
+    class Meta:
+        model = MenuItem
+        fields = ["name","category","price","stock","image","description","is_active","is_popular"]
+        widgets = {
+            "name": forms.TextInput(attrs={"class":"form-control","placeholder":"Item name"}),
+            "category": forms.Select(attrs={"class":"form-control"}),
+            "price": forms.NumberInput(attrs={"class":"form-control","step":"0.01"}),
+            "stock": forms.NumberInput(attrs={"class":"form-control","min":0}),
+            "description": forms.Textarea(attrs={"class":"form-control","rows":3}),
+            "is_active": forms.CheckboxInput(attrs={"class":"form-check-input"}),
+            "is_popular": forms.CheckboxInput(attrs={"class":"form-check-input"}),
+        }

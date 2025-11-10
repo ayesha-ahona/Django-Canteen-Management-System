@@ -1,0 +1,11 @@
+{% extends "my_canteen/base.html" %}
+{% block content %}
+<h2>Delete Item</h2>
+<p>Are you sure you want to delete <strong>{{ item.name }}</strong>?</p>
+
+<form method="post">
+  {% csrf_token %}
+  <button class="btn btn-soft-danger" type="submit">Yes, delete</button>
+  <a class="btn" href="{% url 'vendor_item_list' %}">Cancel</a>
+</form>
+{% endblock %}
