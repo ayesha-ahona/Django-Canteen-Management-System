@@ -93,6 +93,12 @@ urlpatterns = [
     path('vendor/items/<int:pk>/edit/', views.vendor_item_edit, name='vendor_item_edit'),
     path('vendor/items/<int:pk>/delete/', views.vendor_item_delete, name='vendor_item_delete'),
     path('vendor/items/<int:pk>/toggle/', views.vendor_item_toggle_active, name='vendor_item_toggle_active'),
+
+    # ===== Favorites / Wishlist =====
+    path('favorites/', views.favorites_page, name='favorites'),
+    path('favorite/<int:item_id>/toggle/', views.toggle_favorite, name='toggle_favorite'),
+
+
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

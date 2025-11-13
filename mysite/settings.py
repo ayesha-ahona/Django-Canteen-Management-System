@@ -63,6 +63,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'my_canteen.context_processors.cart_count',
+                'my_canteen.context_processors.favorites_processor',
             ],
         },
     },

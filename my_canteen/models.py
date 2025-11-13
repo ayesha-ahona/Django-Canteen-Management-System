@@ -194,3 +194,14 @@ def review_saved(sender, instance, created, **kwargs):
 @receiver(post_delete, sender=Review)
 def review_deleted(sender, instance, **kwargs):
     _recalc_item_rating(instance.item)
+
+class Favorite(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    item = models.ForeignKey(MenuItem, on_delete=models.CASCADE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("user", "item")   # একজন ইউজার একই item দুইবার favorite করতে পারবে না
+
+    def __str__(self):
+        return f"{self.user.username} ❤️ {self.item.name}"
