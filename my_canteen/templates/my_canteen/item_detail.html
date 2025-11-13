@@ -2,6 +2,7 @@
 {% block content %}
 
 <div class="item-detail-container">
+  
   <!-- ===== Left: Image ===== -->
   <div class="item-image">
     {% if item.image %}
@@ -19,11 +20,19 @@
       {{ item.price }} Tk
     </div>
 
-    <!-- Stock info / badge -->
-    {% if item.stock > 0 %}
-      <p class="muted">Available: {{ item.stock }} pcs</p>
+    <!-- ===== STOCK BADGE ===== -->
+    {% if item.stock > 10 %}
+      <span class="badge success" style="margin-top:6px; display:inline-block;">
+        In Stock ({{ item.stock }})
+      </span>
+    {% elif item.stock > 0 %}
+      <span class="badge warning" style="margin-top:6px; display:inline-block;">
+        Low Stock ({{ item.stock }})
+      </span>
     {% else %}
-      <p class="out-of-stock"><strong>Out of Stock</strong></p>
+      <span class="badge danger" style="margin-top:6px; display:inline-block;">
+        Out of Stock
+      </span>
     {% endif %}
 
     <!-- ===== Avg Rating + Count ===== -->
@@ -41,21 +50,22 @@
       <span class="count">({{ total_reviews }} reviews)</span>
     </div>
 
+    <!-- Description -->
     <div class="item-description">
       {{ item.description }}
     </div>
 
     <!-- ===== Buttons ===== -->
-    <div style="margin-top: 10px; display:flex; gap:10px; flex-wrap:wrap;">
+    <div style="margin-top: 12px; display:flex; gap:10px; flex-wrap:wrap;">
 
-      <!-- Add to Cart button (only if in stock) -->
+      <!-- Add to Cart button -->
       {% if item.stock > 0 %}
         <a href="{% url 'add_to_cart' item.id %}" class="btn">Add to Cart</a>
       {% else %}
-        <p class="muted" style="margin:0;">You can’t order this right now.</p>
+        <p class="muted" style="margin:0;">You can't order this right now.</p>
       {% endif %}
 
-      <!-- Favorite / Wishlist button (only for logged-in users) -->
+      <!-- Favorite Button -->
       {% if user.is_authenticated %}
         <a href="{% url 'toggle_favorite' item.id %}" class="btn btn-soft">
           {% if item.id in favorite_items %}
@@ -75,12 +85,12 @@
 <div class="feedback-section">
   <h3>Customer Feedback</h3>
 
-  <!-- All reviews -->
   {% if reviews %}
     {% for r in reviews %}
       <div class="review-card">
         <div class="review-head">
           <strong>{{ r.user.username }}</strong>
+
           <span class="review-stars">
             {% for i in "12345" %}
               {% if forloop.counter <= r.rating %}
@@ -90,6 +100,7 @@
               {% endif %}
             {% endfor %}
           </span>
+
           <span class="review-date">
             {{ r.created_at|date:"M d, Y h:i A" }}
           </span>
@@ -104,15 +115,11 @@
     <p class="muted">No reviews yet. Be the first to review!</p>
   {% endif %}
 
-  <!-- ===== Review Form / Messages ===== -->
+  <!-- Review Form Logic -->
   {% if user.is_authenticated %}
-
-    {# কন্ডিশন ১: ইউজার রিভিউ দিতে পারবে (কিনেছে কিন্তু রিভিউ দেয়নি) #}
     {% if can_review %}
       <hr class="divider">
-      <form method="post"
-            action="{% url 'submit_review' item.id %}"
-            class="review-form card">
+      <form method="post" action="{% url 'submit_review' item.id %}" class="review-form card">
         {% csrf_token %}
         <div class="stars-input">
           {{ form.rating }}
@@ -125,14 +132,11 @@
         </button>
       </form>
 
-    {# কন্ডিশন ২: ইউজার ইতোমধ্যে রিভিউ দিয়েছে #}
     {% elif already %}
       <div class="note">
         You already reviewed this item.
         <a class="link" href="{% url 'edit_review' item.id %}">Edit</a>
-        <form method="post"
-              action="{% url 'delete_review' item.id %}"
-              class="inline">
+        <form method="post" action="{% url 'delete_review' item.id %}" class="inline">
           {% csrf_token %}
           <button type="submit" class="link link--danger">
             Delete
@@ -140,19 +144,14 @@
         </form>
       </div>
 
-    {# কন্ডিশন ৩: লগইন আছে কিন্তু order delivered/complete না হওয়ায় review allow না #}
     {% else %}
       <div class="note">
         You can review after your order is delivered.
       </div>
     {% endif %}
-
   {% else %}
-    {# কন্ডিশন ৪: ইউজার লগইন করা নেই #}
     <div class="note">
-      Please
-      <a href="{% url 'login' %}?next={{ request.path }}">login</a>
-      to review.
+      Please <a href="{% url 'login' %}?next={{ request.path }}">login</a> to review.
     </div>
   {% endif %}
 </div>

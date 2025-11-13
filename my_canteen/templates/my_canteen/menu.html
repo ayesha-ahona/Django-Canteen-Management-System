@@ -30,7 +30,6 @@
 
 <!-- ===== Category Chips ===== -->
 <div class="chip-row">
-  {# All button: drop cat, keep other filters #}
   <a
     href="?{% if q %}q={{ q|urlencode }}&{% endif %}
           {% if min_price %}min_price={{ min_price }}&{% endif %}
@@ -59,29 +58,39 @@
 <div class="card-grid">
   {% for item in items %}
     <div class="card surface">
+
       <a class="card-media" href="{% url 'item_detail' item.id %}">
+
         {% if item.image %}
           <img src="{{ item.image.url }}" alt="{{ item.name }}">
         {% else %}
           <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
         {% endif %}
 
-        <!-- Badges: Popular / Out of Stock -->
-        {% if item.is_popular %}
-          <span class="badge info">Popular</span>
-        {% endif %}
-        {% if item.stock <= 0 %}
+        <!-- STOCK BADGES -->
+        {% if item.stock > 10 %}
+          <span class="badge success">In Stock</span>
+        {% elif item.stock > 0 %}
+          <span class="badge warning">Low ({{ item.stock }})</span>
+        {% else %}
           <span class="badge danger">Out</span>
+        {% endif %}
+
+        <!-- Popular -->
+        {% if item.is_popular %}
+          <span class="badge info" style="right:10px; top:10px;">Popular</span>
         {% endif %}
       </a>
 
+      <!-- Name -->
       <a class="card-title" href="{% url 'item_detail' item.id %}">
         {{ item.name }}
       </a>
 
+      <!-- Price + Rating -->
       <div class="card-meta">
         <span class="price"><strong>{{ item.price }} Tk</strong></span>
-        
+
         <span class="stars" title="{{ item.rating_avg|default:0|floatformat:1 }}/5">
           {% for i in "12345" %}
             {% if item.rating_avg and forloop.counter <= item.rating_avg %}
@@ -95,11 +104,13 @@
         </span>
       </div>
 
+      <!-- Add to Cart -->
       {% if item.stock > 0 %}
         <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
       {% else %}
         <p class="out-of-stock">Out of Stock</p>
       {% endif %}
+
     </div>
   {% empty %}
     <div class="empty-state">
@@ -110,39 +121,37 @@
   {% endfor %}
 </div>
 
-<!-- ===== Recommended Section (simple AI-ish block) ===== -->
+<!-- ===== Recommended Section ===== -->
 {% if recommended %}
   <hr class="divider">
   <div class="recommended">
     <h3>⭐ Recommended For You</h3>
+
     <div class="card-grid">
       {% for item in recommended %}
         <div class="card surface">
+
           <a class="card-media" href="{% url 'item_detail' item.id %}">
             {% if item.image %}
               <img src="{{ item.image.url }}" alt="{{ item.name }}">
             {% else %}
               <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
             {% endif %}
+
+            <!-- STOCK BADGE -->
+            {% if item.stock > 10 %}
+              <span class="badge success">In Stock</span>
+            {% elif item.stock > 0 %}
+              <span class="badge warning">Low ({{ item.stock }})</span>
+            {% else %}
+              <span class="badge danger">Out</span>
+            {% endif %}
           </a>
 
-          <a class="card-title" href="{% url 'item_detail' item.id %}">
-            {{ item.name }}
-          </a>
-          
+          <a class="card-title" href="{% url 'item_detail' item.id %}">{{ item.name }}</a>
+
           <div class="card-meta">
             <span class="price"><strong>{{ item.price }} Tk</strong></span>
-            <span class="stars" title="{{ item.rating_avg|default:0|floatformat:1 }}/5">
-              {% for i in "12345" %}
-                {% if item.rating_avg and forloop.counter <= item.rating_avg %}
-                  <span class="star filled">★</span>
-                {% else %}
-                  <span class="star">☆</span>
-                {% endif %}
-              {% endfor %}
-              <span class="avg">{{ item.rating_avg|default:0|floatformat:1 }}</span>
-              <span class="count">({{ item.rating_count|default:0 }})</span>
-            </span>
           </div>
 
           {% if item.stock > 0 %}
@@ -150,6 +159,7 @@
           {% else %}
             <p class="out-of-stock">Out of Stock</p>
           {% endif %}
+
         </div>
       {% endfor %}
     </div>
