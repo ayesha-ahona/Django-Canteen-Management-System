@@ -369,22 +369,21 @@ a {
 /* ✅ আপডেটেড: কার্ডের মেটা (Price + Rating) */
 .card-meta {
     display: flex;
-    flex-direction: column; /* <-- এটি রেটিংকে নিচে নামাবে */
-    align-items: center;   /* <-- এটি সব মাঝখানে আনবে */
+    flex-direction: column;
+    align-items: center;
     padding: 0 4px;
     margin-bottom: 10px;
-    gap: 4px; /* <-- প্রাইস এবং রেটিং এর মধ্যে গ্যাপ */
+    gap: 4px;
 }
 
 .card .price {
     font-weight: 700;
-    color: #333; /* <-- আগের কালো কালার */
+    color: #333;
 }
 
 .card .btn {
     margin-top: auto; 
 }
-
 
 .card button { 
     margin-top: 10px; 
@@ -731,7 +730,7 @@ a {
     margin-top: 20px;
 }
 
-/* ===== Review / Feedback (আপডেটেড) ===== */
+/* ===== Review / Feedback ===== */
 .feedback-section { 
     background: #fff; 
     padding: 25px; 
@@ -739,23 +738,22 @@ a {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); 
 }
 
-/* ✅ আপডেটেড: স্টার রেটিংয়ের জন্য গ্লোবাল স্টাইল */
+/* স্টার রেটিং */
 .stars {
     display: inline-flex;
     align-items: center;
     gap: 1px;
-    color: #ffb400; /* Gold */
+    color: #ffb400;
 }
 .star {
-    color: #ccc; /* Empty star color */
+    color: #ccc;
     font-size: 18px; 
     line-height: 1;
 }
 .star.filled {
-    color: #ffb400; /* ✅ এটাই স্টারের কালার ঠিক করবে */
+    color: #ffb400;
 }
 
-/* ✅ আপডেটেড: রেটিংয়ের সাথে (avg) এবং (count) টেক্সট */
 .item-rating .avg,
 .card-meta .avg {
     color: #555;
@@ -770,7 +768,6 @@ a {
     font-size: 14px;
 }
 
-/* ✅ আপডেটেড: কার্ডের ভেতরের স্টারের জন্য ছোট সাইজ */
 .card-meta .stars {
     font-size: 15px;
 }
@@ -784,7 +781,6 @@ a {
 .card-meta .count {
     font-size: 12px;
 }
-
 
 .review-card { 
     background: #fafafa; 
@@ -902,7 +898,6 @@ a {
     display: inline;
     margin-left: 5px;
 }
-
 
 /* ===== Site Footer (Home-only) ===== */
 .site-footer { 
@@ -1056,7 +1051,215 @@ a {
     color: #fff; 
 }
 
+/* ===== Checkout Page (layout, coupon, payment) ===== */
+
+.checkout-wrapper {
+    max-width: 1000px;
+    margin: 30px auto;
+    padding: 20px 16px;
+}
+
+.checkout-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    text-align: center;
+    color: #d32f2f;
+}
+
+/* দুই কলাম layout */
+.checkout-grid {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 20px;
+}
+
+/* LEFT side */
+.checkout-left h3 {
+    margin-bottom: 10px;
+}
+
+/* Items table */
+.checkout-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.checkout-table th {
+    background: #d32f2f;
+    color: #fff;
+    padding: 10px 12px;
+    font-size: 14px;
+    text-align: left;
+}
+
+.checkout-table td {
+    padding: 9px 12px;
+    font-size: 14px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+/* RIGHT side */
+.checkout-right {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.checkout-form {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Summary box */
+.summary-box {
+    padding: 14px 16px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.summary-box h4 {
+    margin: 0 0 8px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 4px;
+    font-size: 14px;
+}
+
+/* Coupon box */
+.coupon-box {
+    padding: 14px 16px;
+    background: #f5faff;
+    border-radius: 12px;
+    border: 1px solid #cfe6ff;
+    font-size: 14px;
+}
+
+.coupon-box label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 6px;
+}
+
+.coupon-input {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.coupon-input input {
+    flex: 1;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+    outline: none;
+}
+
+.coupon-input button {
+    padding: 8px 14px;
+    border-radius: 8px;
+    background: #2e7d32;
+    color: #fff;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.coupon-input button:hover {
+    background: #1b5e20;
+}
+
+/* Payment box */
+.payment-box {
+    padding: 14px 16px;
+    background: #fff;
+    border-radius: 12px;
+    border: 1px solid #eee;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+
+.payment-box h4 {
+    margin: 0 0 8px;
+}
+
+.payment-options {
+    margin-bottom: 8px;
+}
+
+/* mock card fields */
+.mock-card-fields {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 8px 12px;
+    margin-top: 4px;
+    font-size: 14px;
+}
+
+.mock-card-fields label {
+    font-size: 13px;
+    font-weight: 600;
+    display: block;
+    margin-bottom: 4px;
+}
+
+.mock-card-fields input {
+    width: 100%;
+    padding: 7px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+/* Pay Now button */
+.pay-now-btn {
+    width: 100%;
+    margin-top: 4px;
+    background: #d32f2f;
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 10px;
+    border: none;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    text-align: center;
+    transition: 0.2s;
+}
+
+.pay-now-btn:hover {
+    background: #b71c1c;
+}
+
+/* Back link নিচে আলাদা */
+.checkout-back-link {
+    margin-top: 8px;
+}
+
 /* ===== Responsive ===== */
+
+/* checkout layout ছোট হলে single column */
+@media (max-width: 900px) {
+    .checkout-grid {
+        grid-template-columns: 1fr;
+    }
+    .checkout-wrapper {
+        padding: 16px 12px;
+    }
+}
+
+/* Overall site responsive */
 @media (max-width: 768px) {
     /* Navbar responsive */
     .navbar { 
@@ -1109,5 +1312,14 @@ a {
     .footer-links a { 
         margin: 0 5px; 
     }
+}
 
+/* checkout এ ছোট স্ক্রিনে coupon ইনপুট column করা */
+@media (max-width: 600px) {
+    .coupon-input {
+        flex-direction: column;
+    }
+    .coupon-input button {
+        width: 100%;
+    }
 }

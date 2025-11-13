@@ -1,124 +1,130 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
 
-<div class="container my-4">
-  <h2 class="mb-3">Checkout</h2>
+<div class="checkout-wrapper">
 
-  <div class="row g-3">
-    <!-- LEFT: Order Items -->
-    <div class="col-lg-7">
-      <div class="card mb-3">
-        <div class="card-body">
-          <h5 class="card-title">Order Items</h5>
+  <h2 class="checkout-title">Checkout</h2>
 
-          <table class="table table-sm">
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Qty</th>
-                <th>Price</th>
-                <th>Subtotal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for row in items %}
-              <tr>
-                <td>{{ row.item.name }}</td>
-                <td>{{ row.qty }}</td>
-                <td>{{ row.item.price }} Tk</td>
-                <td>{{ row.subtotal }} Tk</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
+  <!-- দুই কলামের লে–আউট -->
+  <div class="checkout-grid">
 
-          {% if not items %}
-            <p class="text-muted mb-0">Your cart is empty.</p>
-          {% endif %}
-        </div>
-      </div>
+    <!-- ========== LEFT : Order Items ========== -->
+    <div class="checkout-left">
+      <h3>Order Items</h3>
+
+      <table class="checkout-table">
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th style="width:70px;">Qty</th>
+            <th style="width:90px;">Price</th>
+            <th style="width:100px;">Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in items %}
+            <tr>
+              <td>{{ row.item.name }}</td>
+              <td>{{ row.qty }}</td>
+              <td>{{ row.item.price }} Tk</td>
+              <td>{{ row.subtotal }} Tk</td>
+            </tr>
+          {% empty %}
+            <tr>
+              <td colspan="4" style="text-align:center;">Your cart is empty.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
     </div>
 
-    <!-- RIGHT: Summary + Coupon + Payment -->
-    <div class="col-lg-5">
-      <form method="post" class="card">
-        <div class="card-body">
-          {% csrf_token %}
+    <!-- ========== RIGHT : Summary + Coupon + Payment ========== -->
+    <div class="checkout-right">
 
-          <h5 class="card-title">Summary</h5>
+      <form method="post" class="checkout-form">
+        {% csrf_token %}
 
-          <p class="mb-1"><strong>Subtotal:</strong> {{ total }} Tk</p>
+        <!-- Order summary -->
+        <div class="summary-box">
+          <h4>Order Summary</h4>
 
-          {% if discount_amount and discount_amount > 0 %}
-            <p class="mb-1 text-success">
-              <strong>Discount:</strong> -{{ discount_amount|floatformat:0 }} Tk
-            </p>
-            <p class="mb-2">
-              <strong>Payable:</strong> {{ grand_total|floatformat:0 }} Tk
-            </p>
-          {% else %}
-            <p class="mb-2">
-              <strong>Payable:</strong> {{ total|floatformat:0 }} Tk
-            </p>
-          {% endif %}
-
-          <hr>
-
-          <!-- Coupon / Promo Code -->
-          <div class="mb-3">
-            <label for="id_coupon_code" class="form-label">
-              Coupon / Promo Code (optional)
-            </label>
-            <input
-              type="text"
-              id="id_coupon_code"
-              name="coupon_code"
-              class="form-control"
-              value="{{ coupon_code }}"
-              placeholder="e.g. FOOD10, HAPPY30"
-            >
-            <div class="form-text">
-              Try: <code>FOOD10</code>, <code>WELCOME20</code>, <code>STUDENT5</code>,
-              <code>FESTIVE15</code>, <code>VIP25</code>, <code>HAPPY30</code>,
-              <code>SAVE30</code>, <code>MEAL40</code>, <code>BUDGET35</code>,
-              <code>SNACK15</code>, <code>LUNCH20</code>
-            </div>
+          <div class="summary-row">
+            <span>Subtotal</span>
+            <span>{{ total }} Tk</span>
           </div>
 
-          <hr>
+          <div class="summary-row">
+            <span>Discount</span>
+            <span>
+              {% if discount_amount %}
+                -{{ discount_amount }} Tk
+              {% else %}
+                0 Tk
+              {% endif %}
+            </span>
+          </div>
 
-          <!-- Payment Method -->
-          <h5 class="card-title">Payment Method</h5>
+          <hr class="divider">
 
-          <!-- radios -->
-          <div class="mb-3">
+          <div class="summary-row" style="font-weight:700;">
+            <span>Payable Total</span>
+            <span>{{ grand_total }} Tk</span>
+          </div>
+        </div>
+
+        <!-- Coupon / Promo -->
+        <div class="coupon-box">
+          <label for="id_coupon_code">Coupon / Promo Code</label>
+          <div class="coupon-input">
+            <input type="text"
+                   id="id_coupon_code"
+                   name="coupon_code"
+                   placeholder="e.g. FOOD10, HAPPY30"
+                   value="{{ coupon_code|default:'' }}">
+            <button type="submit" name="apply_coupon">
+              Apply
+            </button>
+          </div>
+          <small class="muted">
+            Try codes: <strong>FOOD10</strong>, <strong>WELCOME20</strong>, <strong>STUDENT5</strong>,
+            <strong>FESTIVE15</strong>, <strong>VIP25</strong>, <strong>HAPPY30</strong>,
+            <strong>SAVE30</strong>, <strong>MEAL40</strong>, <strong>BUDGET35</strong>,
+            <strong>SNACK15</strong>, <strong>LUNCH20</strong>
+          </small>
+        </div>
+
+        <!-- Payment method -->
+        <div class="payment-box">
+          <h4>Payment Method</h4>
+
+          <div class="payment-options">
             {{ form.payment_method }}
           </div>
 
-          <!-- Mock card fields (show only if mock_card selected) -->
-          <div id="mock-card-fields" class="row g-2" style="display:none;">
-            <div class="col-md-6">
-              <label class="form-label">{{ form.card_number.label }}</label>
+          <!-- Mock card fields -->
+          <div id="mock-card-fields" class="mock-card-fields" style="display:none;">
+            <div>
+              <label>{{ form.card_number.label }}</label>
               {{ form.card_number }}
             </div>
-            <div class="col-md-3">
-              <label class="form-label">{{ form.card_cvc.label }}</label>
+            <div>
+              <label>{{ form.card_cvc.label }}</label>
               {{ form.card_cvc }}
             </div>
-            <div class="col-12">
-              <small class="text-muted">Demo only — no real charge.</small>
-            </div>
+            <small class="muted">Demo only — no real charge.</small>
           </div>
-
-          <button type="submit" class="btn btn-primary mt-3 w-100">
-            Place Order &amp; Pay
-          </button>
         </div>
+
+        <button type="submit" class="pay-now-btn">
+          Place Order &amp; Pay
+        </button>
+
       </form>
 
-      <div class="mt-3">
-        <a href="{% url 'cart' %}" class="btn btn-link">&larr; Back to cart</a>
+      <div class="checkout-back-link">
+        <a href="{% url 'cart' %}" class="btn btn-soft">&larr; Back to Cart</a>
       </div>
+
     </div>
   </div>
 </div>
@@ -129,17 +135,11 @@
   const mockFields = document.getElementById('mock-card-fields');
 
   function toggleFields() {
-    const checked = document.querySelector('input[name="payment_method"]:checked');
-    const value = checked ? checked.value : null;
+    const v = document.querySelector('input[name="payment_method"]:checked')?.value;
     if (!mockFields) return;
-    mockFields.style.display = (value === 'mock_card') ? 'flex' : 'none';
+    mockFields.style.display = (v === 'mock_card') ? 'block' : 'none';
   }
-
-  radios.forEach(function (r) {
-    r.addEventListener('change', toggleFields);
-  });
-
-  // Initial state on page load
+  radios.forEach(r => r.addEventListener('change', toggleFields));
   toggleFields();
 })();
 </script>
