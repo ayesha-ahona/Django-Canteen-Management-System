@@ -304,7 +304,7 @@ def item_detail(request, item_id):
     if request.user.is_authenticated:
         purchased = OrderItem.objects.filter(
             order__user=request.user,
-            order_status_in=["delivered", "completed"],
+            order__status__in=["delivered", "completed"],
             item=item,
         ).exists()
 
@@ -330,10 +330,10 @@ def item_detail(request, item_id):
 def submit_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
-    # শুধুই delivered/completed order থাকলেই review allowed
+    # ✅ আবার সিকিউরিটি চেক
     purchased = OrderItem.objects.filter(
         order__user=request.user,
-        order_status_in=["delivered", "completed"],
+        order__status__in=["delivered", "completed"],  # এখানেও একই
         item=item,
     ).exists()
     if not purchased:
