@@ -868,9 +868,14 @@ def vendor_item_list(request):
         return redirect("home")
 
     q = request.GET.get("q", "").strip()
+    
     qs = MenuItem.objects.all().order_by("-is_active", "name")
+
     if q:
-        qs = qs.filter(Q(name_icontains=q) | Q(description_icontains=q))
+        qs = qs.filter(
+            Q(name__icontains=q) |
+            Q(description__icontains=q)
+        )
 
     items = Paginator(qs, 10).get_page(request.GET.get("page"))
     return render(request, "my_canteen/vendor/items_list.html", {"items": items, "q": q})
