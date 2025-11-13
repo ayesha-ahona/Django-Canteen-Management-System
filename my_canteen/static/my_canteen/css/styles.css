@@ -1314,6 +1314,88 @@ a {
     }
 }
 
+
+/* ===== Cart Page ===== */
+.cart-wrapper {
+    max-width: 1100px;
+    margin: 30px auto;
+    padding: 0 16px;
+}
+
+.cart-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin-bottom: 18px;
+    color: #d32f2f;
+}
+
+/* দুই কলামের লে–আউট */
+.cart-grid {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 20px;
+}
+
+.cart-summary-card {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 18px 16px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
+    border: 1px solid #eee;
+}
+
+.cart-summary-card h3 {
+    margin: 0 0 10px;
+    font-size: 18px;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.summary-total {
+    margin-top: 10px;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.cart-checkout-btn {
+    width: 100%;
+    margin-top: 14px;
+    text-align: center;
+}
+
+/* quantity form */
+.cart-qty-inner {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.cart-qty-inner input[type="number"] {
+    width: 60px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
+}
+
+/* নিচের লিঙ্ক */
+.cart-bottom-links {
+    margin-top: 12px;
+}
+
+/* ছোট স্ক্রিনে single column */
+@media (max-width: 900px) {
+    .cart-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
 /* checkout এ ছোট স্ক্রিনে coupon ইনপুট column করা */
 @media (max-width: 600px) {
     .coupon-input {

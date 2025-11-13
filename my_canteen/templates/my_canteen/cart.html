@@ -1,39 +1,100 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
-<h2>Your Cart</h2>
 
-{% if items %}
-<table border="1" cellpadding="10" cellspacing="0">
-    <tr>
-        <th>Food</th>
-        <th>Price</th>
-        <th>Quantity</th>
-        <th>Subtotal</th>
-        <th>Actions</th>
-    </tr>
-    {% for entry in items %}
-    <tr>
-        <td>{{ entry.item.name }}</td>
-        <td>{{ entry.item.price }} Tk</td>
-        <td>
-            <form method="post" action="{% url 'update_cart' entry.item.id %}">
-                {% csrf_token %}
-                <input type="number" name="qty" value="{{ entry.qty }}" min="1" style="width:50px;">
-                <button type="submit">Update</button>
-            </form>
-        </td>
-        <td>{{ entry.subtotal }} Tk</td>
-        <td>
-            <a href="{% url 'remove_from_cart' entry.item.id %}" 
-               style="color:red; font-weight:bold;">Remove</a>
-        </td>
-    </tr>
-    {% endfor %}
-</table>
+<div class="cart-wrapper">
+  <h2 class="cart-title">🛒 Your Cart</h2>
 
-<h3>Total: {{ total }} Tk</h3>
-<a href="{% url 'checkout' %}"><button>Proceed to Checkout</button></a>
-{% else %}
-<p>Your cart is empty.</p>
-{% endif %}
+  {% if items %}
+    <div class="cart-grid">
+      <!-- LEFT: Cart items table -->
+      <div class="cart-left">
+        <table class="orders-table pretty cart-table">
+          <thead>
+            <tr>
+              <th>Food</th>
+              <th>Price</th>
+              <th style="width:150px;">Quantity</th>
+              <th>Subtotal</th>
+              <th class="actions-col">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for entry in items %}
+            <tr>
+              <td>
+                <div class="order-line">
+                  <span class="dot"></span>{{ entry.item.name }}
+                </div>
+              </td>
+              <td>{{ entry.item.price }} Tk</td>
+
+              <!-- Quantity + Update -->
+              <td class="cart-qty">
+                <form method="post"
+                      action="{% url 'update_cart' entry.item.id %}">
+                  {% csrf_token %}
+                  <div class="cart-qty-inner">
+                    <input type="number"
+                           name="qty"
+                           min="1"
+                           value="{{ entry.qty }}">
+                    <button type="submit" class="btn btn-soft">Update</button>
+                  </div>
+                </form>
+              </td>
+
+              <td>{{ entry.subtotal }} Tk</td>
+
+              <!-- Remove -->
+              <td class="actions-col">
+                <a href="{% url 'remove_from_cart' entry.item.id %}"
+                   class="btn btn-soft-danger">
+                  Remove
+                </a>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+
+        <div class="cart-bottom-links">
+          <a href="{% url 'menu' %}" class="btn btn-soft">
+            ← Continue Shopping
+          </a>
+        </div>
+      </div>
+
+      <!-- RIGHT: Summary card -->
+      <div class="cart-right">
+        <div class="cart-summary-card">
+          <h3>Order Summary</h3>
+
+          <div class="summary-row">
+            <span>Items</span>
+            <span>{{ items|length }}</span>
+          </div>
+
+          <div class="summary-row summary-total">
+            <span>Total</span>
+            <span>{{ total }} Tk</span>
+          </div>
+
+          <a href="{% url 'checkout' %}"
+             class="btn cart-checkout-btn">
+            Proceed to Checkout
+          </a>
+        </div>
+      </div>
+    </div>
+  {% else %}
+    <!-- Empty cart -->
+    <div class="empty-state">
+      <img src="https://via.placeholder.com/120?text=Empty+Cart" alt="Empty cart">
+      <h3>Your cart is empty</h3>
+      <p class="muted">Add some tasty food from the menu.</p>
+      <a href="{% url 'menu' %}" class="btn">Browse Menu</a>
+    </div>
+  {% endif %}
+</div>
+
 {% endblock %}
