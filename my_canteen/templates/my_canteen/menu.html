@@ -58,24 +58,20 @@
       <div class="card-meta">
         <span class="price"><strong>{{ item.price }} Tk</strong></span>
         
-        {% if item.rating_avg or item.rating_count %}
-          <span class="stars" title="{{ item.rating_avg|default:0|floatformat:1 }}/5">
-            {% for i in "12345" %}
-              
-              {# ✅ আপডেটেড: |floatformat:0 ফিল্টারটি এখান থেকে সরানো হয়েছে #}
-              {% if item.rating_avg and forloop.counter <= item.rating_avg %}
-                <span class="star filled">★</span>
-              {% else %}
-                <span class="star">☆</span>
-              {% endif %}
-
-            {% endfor %}
-            {% if item.rating_avg %}<span class="avg">{{ item.rating_avg|floatformat:1 }}</span>{% endif %}
-            {% if item.rating_count %}<span class="count">({{ item.rating_count }})</span>{% endif %}
-          </span>
-        {% endif %}
+        <span class="stars" title="{{ item.rating_avg|default:0|floatformat:1 }}/5">
+          
+          {% for i in "12345" %}
+            {% if item.rating_avg and forloop.counter <= item.rating_avg %}
+              <span class="star filled">★</span>
+            {% else %}
+              <span class="star">☆</span>
+            {% endif %}
+          {% endfor %}
+          
+          <span class="avg">{{ item.rating_avg|default:0|floatformat:1 }}</span>
+          <span class="count">({{ item.rating_count|default:0 }})</span>
+        </span>
       </div>
-
       {% if item.stock > 0 %}
         <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
       {% else %}
@@ -102,8 +98,21 @@
             {% endif %}
           </a>
           <a class="card-title" href="{% url 'item_detail' item.id %}">{{ item.name }}</a>
+          
           <div class="card-meta">
             <span class="price"><strong>{{ item.price }} Tk</strong></span>
+            
+            <span class="stars" title="{{ item.rating_avg|default:0|floatformat:1 }}/5">
+              {% for i in "12345" %}
+                {% if item.rating_avg and forloop.counter <= item.rating_avg %}
+                  <span class="star filled">★</span>
+                {% else %}
+                  <span class="star">☆</span>
+                {% endif %}
+              {% endfor %}
+              <span class="avg">{{ item.rating_avg|default:0|floatformat:1 }}</span>
+              <span class="count">({{ item.rating_count|default:0 }})</span>
+            </span>
           </div>
           {% if item.stock > 0 %}
             <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
