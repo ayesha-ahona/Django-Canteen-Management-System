@@ -28,6 +28,22 @@ from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, P
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm, MenuItemForm
 
 
+# ---------- COUPON / PROMO CODES (simple fixed list) ----------
+COUPON_CODES = {
+    "FOOD10": 10,      # 10% off
+    "WELCOME20": 20,   # 20% off
+    "STUDENT5": 5,     # 5% off
+    "FESTIVE15": 15,   # 15% off
+    "VIP25": 25,       # 25% off
+    "HAPPY30": 30,    # 30% off
+    "SAVE30": 30,     # 30% off
+    "MEAL40": 40,    # 40% off
+    "BUDGET35": 35,  # 35% off
+    "SNACK15": 15,   # 15% off
+    "LUNCH20": 20,  # 20% off
+}
+
+
 # ========== Email Verification Token ==========
 class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
@@ -477,31 +493,38 @@ def checkout(request):
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
 
-    total = 0
+    # --- Build cart items list ---
     cart_items = []
+    total = 0
     for item_id, qty in cart.items():
         item = get_object_or_404(MenuItem, id=item_id, is_active=True)
-        if item.stock < qty:
-            messages.error(request, f"{item.name} is out of stock!")
-            return redirect("cart")
         subtotal = float(item.price) * qty
         cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
         total += subtotal
 
+    # --- Coupon code logic ---
+    coupon_code = request.POST.get("coupon_code", "").strip().upper()
+    discount_percent = COUPON_CODES.get(coupon_code, 0)
+    discount_amount = (total * discount_percent / 100) if discount_percent else 0
+    grand_total = total - discount_amount
+
+    # --- Payment method form ---
     if request.method == "POST":
         form = CheckoutPaymentForm(request.POST)
         if form.is_valid():
             method = form.cleaned_data["payment_method"]
 
+            # Create order
             order = Order.objects.create(
                 user=request.user,
-                total_price=total,
+                total_price=grand_total,
                 address="Default Address",
                 status="pending",
                 payment_status="unpaid",
                 payment_method=method,
             )
 
+            # Add order items + stock reduce
             for item_id, qty in cart.items():
                 item = get_object_or_404(MenuItem, id=item_id)
                 item.stock -= qty
@@ -510,45 +533,48 @@ def checkout(request):
                     order=order, item=item, quantity=qty, unit_price=item.price
                 )
 
+            # Payment process
             payment = Payment.objects.create(
-                order=order, method=method, amount=order.total_price, status="pending"
+                order=order,
+                method=method,
+                amount=order.total_price,
+                status="pending",
             )
 
             if method == "cash":
                 payment.status = "paid"
-                payment.paid_at = timezone.now()
-                payment.transaction_id = f"CASH-{order.id}-{int(timezone.now().timestamp())}"
                 payment.save()
                 order.payment_status = "paid"
                 order.save()
                 request.session["cart"] = {}
-                messages.success(
-                    request, f"Order placed successfully! Total: {total} Tk (Cash)"
-                )
+                messages.success(request, "Order placed successfully!")
                 return redirect("payment_success")
 
             elif method == "mock_card":
                 payment.status = "paid"
-                payment.paid_at = timezone.now()
-                payment.transaction_id = f"MOCK-{order.id}-{int(timezone.now().timestamp())}"
                 payment.save()
                 order.payment_status = "paid"
                 order.save()
                 request.session["cart"] = {}
-                messages.success(request, f"Payment successful! Order #{order.id}")
+                messages.success(request, "Mock Card Payment successful!")
                 return redirect("payment_success")
 
-            request.session["cart"] = {}
-            return redirect("payment_start", order_id=order.id)
     else:
         form = CheckoutPaymentForm()
 
+    # --- Render page ---
     return render(
         request,
         "my_canteen/checkout.html",
-        {"items": cart_items, "total": total, "form": form},
+        {
+            "items": cart_items,
+            "total": total,
+            "form": form,
+            "coupon_code": coupon_code,
+            "discount_amount": discount_amount,
+            "grand_total": grand_total,
+        },
     )
-
 
 def payment_start(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
