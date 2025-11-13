@@ -24,7 +24,7 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.core.paginator import Paginator
-from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, Payment
+from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, Payment, Favorite
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm, MenuItemForm
 
 
@@ -932,3 +932,26 @@ def vendor_item_toggle_active(request, pk):
     item.save(update_fields=["is_active"])
     messages.success(request, f"'{item.name}' has been {'activated ✅' if item.is_active else 'deactivated ❌'}.")
     return redirect("vendor_item_list")
+
+
+
+# ---------- Favorites ----------
+@login_required
+def toggle_favorite(request, item_id):
+    item = get_object_or_404(MenuItem, id=item_id)
+
+    fav, created = Favorite.objects.get_or_create(user=request.user, item=item)
+
+    if not created:  
+        fav.delete()
+        messages.info(request, f"Removed from favorites.")
+    else:
+        messages.success(request, f"Added to favorites!")
+
+    return redirect("item_detail", item_id=item.id)
+
+
+@login_required
+def favorites_page(request):
+    fav_items = Favorite.objects.filter(user=request.user).select_related("item")
+    return render(request, "my_canteen/favorites.html", {"fav_items": fav_items})

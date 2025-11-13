@@ -1,0 +1,32 @@
+{% extends "my_canteen/base.html" %}
+{% block content %}
+
+<h2>⭐ My Favorites</h2>
+
+<div class="card-grid">
+  {% for fav in fav_items %}
+    <div class="card">
+      <a class="card-media" href="{% url 'item_detail' fav.item.id %}">
+        {% if fav.item.image %}
+          <img src="{{ fav.item.image.url }}" alt="{{ fav.item.name }}">
+        {% else %}
+          <img src="https://via.placeholder.com/300x200" alt="Food">
+        {% endif %}
+      </a>
+
+      <a class="card-title" href="{% url 'item_detail' fav.item.id %}">
+        {{ fav.item.name }}
+      </a>
+
+      <p><strong>{{ fav.item.price }} Tk</strong></p>
+
+      <a href="{% url 'toggle_favorite' fav.item.id %}" class="btn btn-danger">
+        Remove ❤️
+      </a>
+    </div>
+  {% empty %}
+    <p>No favorite items yet.</p>
+  {% endfor %}
+</div>
+
+{% endblock %}
