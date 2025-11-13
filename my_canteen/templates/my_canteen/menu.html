@@ -3,6 +3,7 @@
 
 <h2>🍽️ Our Menu</h2>
 
+<!-- ===== Search + Filters ===== -->
 <form method="get" class="search-filter-form">
   <input type="text" name="q" placeholder="Search food..." value="{{ q }}">
   <input type="number" name="min_price" placeholder="Min Price" value="{{ min_price }}">
@@ -10,9 +11,15 @@
   
   <select name="sort">
     <option value="">Sort by</option>
-    <option value="rating_desc" {% if sort == "rating_desc" %}selected{% endif %}>Rating High → Low</option>
-    <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>Price Low → High</option>
-    <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>Price High → Low</option>
+    <option value="rating_desc" {% if sort == "rating_desc" %}selected{% endif %}>
+      Rating High → Low
+    </option>
+    <option value="price_asc" {% if sort == "price_asc" %}selected{% endif %}>
+      Price Low → High
+    </option>
+    <option value="price_desc" {% if sort == "price_desc" %}selected{% endif %}>
+      Price High → Low
+    </option>
   </select>
   
   {% if active_cat %}
@@ -21,45 +28,61 @@
   <button type="submit">Apply</button>
 </form>
 
+<!-- ===== Category Chips ===== -->
 <div class="chip-row">
   {# All button: drop cat, keep other filters #}
   <a
-    href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if min_price %}min_price={{ min_price }}&{% endif %}{% if max_price %}max_price={{ max_price }}&{% endif %}{% if sort %}sort={{ sort }}{% endif %}"
+    href="?{% if q %}q={{ q|urlencode }}&{% endif %}
+          {% if min_price %}min_price={{ min_price }}&{% endif %}
+          {% if max_price %}max_price={{ max_price }}&{% endif %}
+          {% if sort %}sort={{ sort }}{% endif %}"
     class="chip {% if not active_cat %}active{% endif %}"
-  >All</a>
+  >
+    All
+  </a>
 
   {% for cat in categories %}
     <a
-      href="?cat={{ cat.id }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if min_price %}&min_price={{ min_price }}{% endif %}{% if max_price %}&max_price={{ max_price }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}"
+      href="?cat={{ cat.id }}
+          {% if q %}&q={{ q|urlencode }}{% endif %}
+          {% if min_price %}&min_price={{ min_price }}{% endif %}
+          {% if max_price %}&max_price={{ max_price }}{% endif %}
+          {% if sort %}&sort={{ sort }}{% endif %}"
       class="chip {% if active_cat == cat.id|stringformat:'s' %}active{% endif %}"
-    >{{ cat.name }}</a>
+    >
+      {{ cat.name }}
+    </a>
   {% endfor %}
 </div>
 
+<!-- ===== Main Menu Grid ===== -->
 <div class="card-grid">
   {% for item in items %}
-    <div class="card">
+    <div class="card surface">
       <a class="card-media" href="{% url 'item_detail' item.id %}">
         {% if item.image %}
           <img src="{{ item.image.url }}" alt="{{ item.name }}">
         {% else %}
           <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
         {% endif %}
+
+        <!-- Badges: Popular / Out of Stock -->
         {% if item.is_popular %}
-          <span class="badge">Popular</span>
+          <span class="badge info">Popular</span>
         {% endif %}
         {% if item.stock <= 0 %}
-          <span class="badge badge-red">Out</span>
+          <span class="badge danger">Out</span>
         {% endif %}
       </a>
 
-      <a class="card-title" href="{% url 'item_detail' item.id %}">{{ item.name }}</a>
+      <a class="card-title" href="{% url 'item_detail' item.id %}">
+        {{ item.name }}
+      </a>
 
       <div class="card-meta">
         <span class="price"><strong>{{ item.price }} Tk</strong></span>
         
         <span class="stars" title="{{ item.rating_avg|default:0|floatformat:1 }}/5">
-          
           {% for i in "12345" %}
             {% if item.rating_avg and forloop.counter <= item.rating_avg %}
               <span class="star filled">★</span>
@@ -67,11 +90,11 @@
               <span class="star">☆</span>
             {% endif %}
           {% endfor %}
-          
           <span class="avg">{{ item.rating_avg|default:0|floatformat:1 }}</span>
           <span class="count">({{ item.rating_count|default:0 }})</span>
         </span>
       </div>
+
       {% if item.stock > 0 %}
         <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
       {% else %}
@@ -79,17 +102,22 @@
       {% endif %}
     </div>
   {% empty %}
-    <p>No food items found.</p>
+    <div class="empty-state">
+      <img src="https://via.placeholder.com/120?text=No+Items" alt="No items">
+      <h3>No food items found</h3>
+      <p>Try changing filters or search text.</p>
+    </div>
   {% endfor %}
 </div>
 
+<!-- ===== Recommended Section (simple AI-ish block) ===== -->
 {% if recommended %}
   <hr class="divider">
   <div class="recommended">
     <h3>⭐ Recommended For You</h3>
     <div class="card-grid">
       {% for item in recommended %}
-        <div class="card">
+        <div class="card surface">
           <a class="card-media" href="{% url 'item_detail' item.id %}">
             {% if item.image %}
               <img src="{{ item.image.url }}" alt="{{ item.name }}">
@@ -97,11 +125,13 @@
               <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
             {% endif %}
           </a>
-          <a class="card-title" href="{% url 'item_detail' item.id %}">{{ item.name }}</a>
+
+          <a class="card-title" href="{% url 'item_detail' item.id %}">
+            {{ item.name }}
+          </a>
           
           <div class="card-meta">
             <span class="price"><strong>{{ item.price }} Tk</strong></span>
-            
             <span class="stars" title="{{ item.rating_avg|default:0|floatformat:1 }}/5">
               {% for i in "12345" %}
                 {% if item.rating_avg and forloop.counter <= item.rating_avg %}
@@ -114,6 +144,7 @@
               <span class="count">({{ item.rating_count|default:0 }})</span>
             </span>
           </div>
+
           {% if item.stock > 0 %}
             <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
           {% else %}

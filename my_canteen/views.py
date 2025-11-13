@@ -1,8 +1,7 @@
-# my_canteen/views.py
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
+from django.http import HttpResponseForbidden
 from django.db.models import Q, Avg, Count
 from django.contrib import messages
 from django.http import (
@@ -172,6 +171,62 @@ def can_user_cancel(order, user) -> bool:
     return order.status in {"pending", "accepted"}
 
 
+# ========= AI Recommendation Helpers =========
+
+from django.db.models import Count
+
+def get_user_top_categories(user, limit=3):
+    """
+    ইউজার কোন কোন category থেকে বেশি খাবার খেয়েছে
+    (delivered/completed অর্ডার থেকে হিসাব করব)
+    """
+    if not user.is_authenticated:
+        return []
+
+    qs = (
+        OrderItem.objects
+        .filter(
+            order__user=user,
+            order__status__in=["delivered", "completed"],
+            item__category__isnull=False,
+        )
+        .values("item__category")          # category id
+        .annotate(cnt=Count("id"))
+        .order_by("-cnt")
+    )
+    cat_ids = [row["item__category"] for row in qs[:limit]]
+    return Category.objects.filter(id__in=cat_ids)
+
+
+def get_recommended_items(user, base_item=None, limit=6):
+    """
+    Medium-level AI-ish recommendation:
+    - যদি base_item দেওয়া থাকে → similar category + popular
+    - না থাকলে → ইউজারের top categories থেকে
+    - new user হলে → শুধু popular items
+    """
+    qs = MenuItem.objects.filter(is_active=True)
+
+    # 1) base_item থাকলে similar category
+    if base_item and base_item.category:
+        qs = qs.filter(category=base_item.category).exclude(id=base_item.id)
+
+    # 2) logged-in user → তার top categories
+    elif user.is_authenticated:
+        top_cats = get_user_top_categories(user)
+        if top_cats:
+            qs = qs.filter(category__in=top_cats)
+
+    # 3) fallback: কিছুই না পেলে সব active item
+    # (উপরে qs already all active, তাই extra কিছু লাগবে না)
+
+    # sort: popular + rating mix (simple version)
+    qs = qs.order_by("-is_popular", "name")
+
+    return qs[:limit]
+
+
+
 # ---------- Home ----------
 def home(request):
     popular_items = MenuItem.objects.filter(is_popular=True, is_active=True)[:6]
@@ -218,12 +273,8 @@ def menu_page(request):
     # all categories for chips
     categories = Category.objects.all().order_by("name")
 
-    # simple recommended block (bottom section)
-    recommended = (
-        MenuItem.objects.filter(is_active=True, is_popular=True)
-        .exclude(id__in=items.values_list("id", flat=True)[:12])
-        [:6]
-    )
+    # ✅ AI-based recommendation for menu page
+    recommended_items = get_recommended_items(request.user, base_item=None, limit=6)
 
     context = {
         "items": items,
@@ -233,48 +284,43 @@ def menu_page(request):
         "min_price": min_price,
         "max_price": max_price,
         "sort": sort,
-        "recommended": recommended,
+        "recommended_items": recommended_items,
     }
     return render(request, 'my_canteen/menu.html', context)
 
 
-# ---------- Item Detail + Reviews (ফিডব্যাক ও রেটিং সিস্টেম) ----------
+
+# ---------- Item Detail + Reviews ----------
 def item_detail(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
-    # ✅ এই আইটেমের সব রিভিউ এবং গড় রেটিং লোড করুন
     reviews = Review.objects.filter(item=item).select_related("user").order_by("-created_at")
     agg = reviews.aggregate(avg=Avg("rating"), cnt=Count("id"))
     avg_rating = round(agg["avg"] or 0, 1)
     total_reviews = agg["cnt"] or 0
 
     can_review, already, form = False, False, None
-    
-    # ✅ বর্তমান ইউজার রিভিউ দিতে পারবে কিনা তা চেক করুন
+
     if request.user.is_authenticated:
-        # 1. ইউজার কি আইটেমটি কিনেছে এবং ডেলিভারি পেয়েছে?
         purchased = OrderItem.objects.filter(
             order__user=request.user,
-            order__status__in=["delivered", "completed"],  # ডেলিভারি বা কমপ্লিট অর্ডারের ক্ষেত্রে
+            order_status_in=["delivered", "completed"],
             item=item,
         ).exists()
-        
-        # 2. ইউজার কি ইতোমধ্যেই রিভিউ দিয়ে দিয়েছে?
+
         already = Review.objects.filter(user=request.user, item=item).exists()
-        
-        # 3. যদি কিনে থাকে এবং আগে রিভিউ না দিয়ে থাকে, তবেই রিভিউ দিতে পারবে
         can_review = purchased and not already
-        
+
         if can_review:
-            form = ReviewForm()  # রিভিউ দেওয়ার জন্য ফর্ম প্রস্তুত করুন
+            form = ReviewForm()
 
     context = {
         "item": item,
         "reviews": reviews,
         "avg_rating": avg_rating,
         "total_reviews": total_reviews,
-        "can_review": can_review,  # টেমপ্লেটে ফর্ম দেখানোর জন্য
-        "already": already,      # "You already reviewed" দেখানোর জন্য
+        "can_review": can_review,
+        "already": already,
         "form": form,
     }
     return render(request, "my_canteen/item_detail.html", context)
@@ -284,23 +330,20 @@ def item_detail(request, item_id):
 def submit_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
-    # ✅ সিকিউরিটি চেক: ইউজার রিভিউ দেওয়ার উপযুক্ত কিনা তা আবার চেক করুন
-    # 1. আইটেমটি কি কিনেছিল?
+    # শুধুই delivered/completed order থাকলেই review allowed
     purchased = OrderItem.objects.filter(
         order__user=request.user,
-        order__status__in=["delivered", "completed"],
+        order_status_in=["delivered", "completed"],
         item=item,
     ).exists()
     if not purchased:
         messages.error(request, "You can review only after you received the item.")
         return redirect("item_detail", item_id=item.id)
 
-    # 2. ইতোমধ্যেই রিভিউ দিয়েছে কিনা?
     if Review.objects.filter(user=request.user, item=item).exists():
         messages.info(request, "You already reviewed this item.")
         return redirect("item_detail", item_id=item.id)
 
-    # ✅ যদি সব ঠিক থাকে এবং POST রিকোয়েস্ট হয়, তবে ফর্ম প্রসেস করুন
     if request.method == "POST":
         form = ReviewForm(request.POST)
         if form.is_valid():
@@ -319,18 +362,15 @@ def submit_review(request, item_id):
 @login_required
 def edit_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
-    # ✅ ইউজারের নিজের রিভিউটি খুঁজে বের করুন
     review = get_object_or_404(Review, item=item, user=request.user)
 
     if request.method == "POST":
-        # ✅ POST ডেটা দিয়ে ফর্মটি লোড করুন (instance=review মানে হলো এটি নতুন নয়, এডিট হচ্ছে)
         form = ReviewForm(request.POST, instance=review)
         if form.is_valid():
             form.save()
             messages.success(request, "Your review has been updated.")
             return redirect("item_detail", item_id=item.id)
     else:
-        # ✅ GET রিকোয়েস্টে, আগের রিভিউটি দিয়ে ফর্ম দেখান
         form = ReviewForm(instance=review)
 
     return render(request, "my_canteen/review_edit.html", {"item": item, "form": form})
@@ -339,16 +379,13 @@ def edit_review(request, item_id):
 @login_required
 def delete_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
-    # ✅ ইউজারের নিজের রিভিউটি খুঁজে বের করুন
     review = get_object_or_404(Review, item=item, user=request.user)
 
-    # ✅ শুধুমাত্র POST রিকোয়েস্টেই ডিলিট হবে
     if request.method == "POST":
         review.delete()
         messages.success(request, "Your review has been deleted.")
         return redirect("item_detail", item_id=item.id)
 
-    # GET রিকোয়েস্ট অ্যালাউ করা হবে না
     return HttpResponseForbidden("Invalid request")
 
 
