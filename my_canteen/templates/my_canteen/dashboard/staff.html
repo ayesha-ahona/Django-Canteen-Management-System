@@ -3,70 +3,74 @@
 
 <h2>👷 Staff Dashboard</h2>
 
-<div class="dashboard-tabs">
-    <button class="tab-btn" onclick="showTab('orders')">📦 Processing Orders</button>
-    <button class="tab-btn" onclick="showTab('profile')">👤 Profile</button>
+<!-- ==== REAL NAVIGATION CARDS (no JS needed) ==== -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:22px;">
+
+    <a href="{% url 'dashboard' %}"
+       class="surface"
+       style="padding:14px;border-radius:10px;display:block;text-decoration:none;">
+        <h3 style="margin:0 0 4px;">📦 Processing Orders</h3>
+        <p style="margin:0;color:#666;font-size:14px;">Manage running orders.</p>
+    </a>
+
+    <a href="{% url 'profile' %}"
+       class="surface"
+       style="padding:14px;border-radius:10px;display:block;text-decoration:none;">
+        <h3 style="margin:0 0 4px;">👤 Profile</h3>
+        <p style="margin:0;color:#666;font-size:14px;">View your staff details.</p>
+    </a>
+
 </div>
 
-<!-- Orders Section -->
-<div id="orders" class="tab-content active">
-    <h3>Processing Orders (Accepted / Preparing)</h3>
-    <table class="orders-table">
-        <tr>
-            <th>#</th>
-            <th>User</th>
-            <th>Items</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-        {% for order in orders %}
-        <tr>
-            <td>#{{ order.id }}</td>
-            <td>{{ order.user.username }}</td>
-            <td>
-                {% for oi in order.orderitem_set.all %}
-                    {{ oi.item.name }} × {{ oi.quantity }}<br>
-                {% endfor %}
-            </td>
-            <td class="status {{ order.status }}">{{ order.status }}</td>
-            <td>
-                <!-- Preparing Button -->
-                <form method="post" action="{% url 'order_preparing' order.id %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button class="btn" {% if order.status == "preparing" or order.status == "ready" or order.status == "completed" %}disabled{% endif %}>
-                        Preparing
-                    </button>
-                </form>
+<!-- ==== Processing Orders Table ==== -->
+<h3>Processing Orders (Accepted / Preparing)</h3>
 
-                <!-- Ready Button -->
-                <form method="post" action="{% url 'order_ready' order.id %}" style="display:inline;">
-                    {% csrf_token %}
-                    <button class="btn" {% if order.status == "ready" or order.status == "completed" %}disabled{% endif %}>
-                        Ready
-                    </button>
-                </form>
-            </td>
-        </tr>
-        {% empty %}
-        <tr><td colspan="5">No processing orders.</td></tr>
-        {% endfor %}
-    </table>
-</div>
+<table class="orders-table">
+    <tr>
+        <th>#</th>
+        <th>User</th>
+        <th>Items</th>
+        <th>Status</th>
+        <th>Actions</th>
+    </tr>
 
-<!-- Profile Section -->
-<div id="profile" class="tab-content">
-    <h3>Profile</h3>
-    <div class="profile-card">
-        <p><strong>Name:</strong> {{ profile.user.username }}</p>
-        <p><strong>Email:</strong> {{ profile.user.email }}</p>
-    </div>
-</div>
+    {% for order in orders %}
+    <tr>
+        <td>#{{ order.id }}</td>
+        <td>{{ order.user.username }}</td>
 
-<script>
-function showTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-}
-</script>
+        <td>
+            {% for oi in order.orderitem_set.all %}
+                {{ oi.item.name }} × {{ oi.quantity }}<br>
+            {% endfor %}
+        </td>
+
+        <td class="status {{ order.status }}">{{ order.status }}</td>
+
+        <td>
+            <!-- Preparing -->
+            <form method="post" action="{% url 'order_preparing' order.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button class="btn"
+                    {% if order.status in "preparing ready completed" %}disabled{% endif %}>
+                    Preparing
+                </button>
+            </form>
+
+            <!-- Ready -->
+            <form method="post" action="{% url 'order_ready' order.id %}" style="display:inline;">
+                {% csrf_token %}
+                <button class="btn"
+                    {% if order.status in "ready completed" %}disabled{% endif %}>
+                    Ready
+                </button>
+            </form>
+        </td>
+
+    </tr>
+    {% empty %}
+    <tr><td colspan="5" style="text-align:center;">No processing orders.</td></tr>
+    {% endfor %}
+</table>
 
 {% endblock %}

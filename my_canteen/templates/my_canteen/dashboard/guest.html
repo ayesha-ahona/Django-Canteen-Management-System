@@ -3,49 +3,57 @@
 
 <h2>👤 Guest Dashboard</h2>
 
-<div class="dashboard-tabs">
-    <button class="tab-btn" onclick="showTab('orders')">🛒 My Orders</button>
-    <button class="tab-btn" onclick="showTab('profile')">👤 Profile</button>
-    <button class="tab-btn" onclick="showTab('cart')">🛍️ Cart</button>
+<!-- ==== Top Navigation Cards (REAL LINK BUTTONS) ==== -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:20px;">
+
+  <a href="{% url 'orders' %}"
+     class="surface"
+     style="padding:14px;border-radius:10px;text-decoration:none;display:block;">
+    <h3 style="margin:0 0 4px;">🛒 My Orders</h3>
+    <p style="margin:0;color:#666;font-size:14px;">View your order history.</p>
+  </a>
+
+  <a href="{% url 'cart' %}"
+     class="surface"
+     style="padding:14px;border-radius:10px;text-decoration:none;display:block;">
+    <h3 style="margin:0 0 4px;">🛍️ My Cart</h3>
+    <p style="margin:0;color:#666;font-size:14px;">See items in your cart.</p>
+  </a>
+
+  <a href="{% url 'profile' %}"
+     class="surface"
+     style="padding:14px;border-radius:10px;text-decoration:none;display:block;">
+    <h3 style="margin:0 0 4px;">👤 Profile</h3>
+    <p style="margin:0;color:#666;font-size:14px;">View your personal info.</p>
+  </a>
+
 </div>
 
-<div id="orders" class="tab-content active">
-    <h3>My Orders</h3>
-    <table class="orders-table">
-        <tr><th>Date</th><th>Items</th><th>Total</th><th>Status</th></tr>
-        {% for order in orders %}
-        <tr>
-            <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
-            <td>
-                {% for oi in order.orderitem_set.all %}
-                    {{ oi.item.name }} × {{ oi.quantity }} <br>
-                {% endfor %}
-            </td>
-            <td>{{ order.total_price }} Tk</td>
-            <td class="status {{ order.status }}">{{ order.status }}</td>
-        </tr>
-        {% empty %}<tr><td colspan="4">No orders yet.</td></tr>{% endfor %}
-    </table>
-</div>
-
-<div id="profile" class="tab-content">
-    <h3>Profile</h3>
-    <div class="profile-card">
-        <p><strong>Name:</strong> {{ profile.user.username }}</p>
-        <p><strong>Email:</strong> {{ profile.user.email }}</p>
-    </div>
-</div>
-
-<div id="cart" class="tab-content">
-    <h3>My Cart</h3>
-    <p><a href="{% url 'cart' %}" class="btn">Go to Cart</a></p>
-</div>
-
-<script>
-function showTab(tabId) {
-    document.querySelectorAll('.tab-content').forEach(div => div.classList.remove('active'));
-    document.getElementById(tabId).classList.add('active');
-}
-</script>
+<!-- ==== Orders Section ==== -->
+<h3>My Orders</h3>
+<table class="orders-table">
+    <tr>
+      <th>Date</th>
+      <th>Items</th>
+      <th>Total</th>
+      <th>Status</th>
+    </tr>
+    {% for order in orders %}
+    <tr>
+        <td>{{ order.created_at|date:"M d, Y H:i" }}</td>
+        <td>
+            {% for oi in order.orderitem_set.all %}
+                {{ oi.item.name }} × {{ oi.quantity }} <br>
+            {% endfor %}
+        </td>
+        <td>{{ order.total_price }} Tk</td>
+        <td class="status {{ order.status }}">{{ order.status }}</td>
+    </tr>
+    {% empty %}
+      <tr>
+        <td colspan="4" style="text-align:center;">No orders yet.</td>
+      </tr>
+    {% endfor %}
+</table>
 
 {% endblock %}
