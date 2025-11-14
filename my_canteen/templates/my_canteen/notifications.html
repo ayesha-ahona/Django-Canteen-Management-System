@@ -1,0 +1,68 @@
+{% extends "my_canteen/base.html" %}
+{% load static %}
+
+{% block content %}
+<section class="container" style="max-width: 900px;">
+  <div style="display:flex;align-items:center;gap:.6rem;margin:24px 0 12px;">
+    <span style="font-size:22px;">🔔</span>
+    <h2 style="margin:0;">Notifications</h2>
+  </div>
+
+  <p style="color:#666;margin-bottom:18px;">
+    All your order updates and important alerts will appear here.
+  </p>
+
+  {% if notifs %}
+    <div style="background:#fff;border:1px solid #eee;border-radius:14px;
+                box-shadow:0 2px 8px rgba(0,0,0,.03);padding:12px 0;">
+      {% for n in notifs %}
+        <div style="
+            padding:12px 18px;
+            border-bottom:1px solid #f2f2f2;
+            display:flex;
+            justify-content:space-between;
+            gap:10px;
+            {% if not n.is_read %}background:#fff8e1;{% endif %}
+        ">
+          <div>
+            <div style="font-weight:600;{% if not n.is_read %}color:#c62828;{% endif %}">
+              {{ n.title }}
+            </div>
+            <div style="font-size:.9rem;color:#555;margin-top:4px;">
+              {{ n.message }}
+            </div>
+            <div style="font-size:.8rem;color:#999;margin-top:4px;">
+              {{ n.created_at|date:"M d, Y h:i a" }}
+            </div>
+          </div>
+
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            {% if n.link %}
+              <a href="{% url 'notification_mark_read' n.id %}"
+                 style="font-size:.85rem;background:#c62828;color:#fff;
+                        padding:6px 10px;border-radius:999px;text-decoration:none;">
+                Open
+              </a>
+            {% else %}
+              {% if not n.is_read %}
+                <a href="{% url 'notification_mark_read' n.id %}"
+                   style="font-size:.85rem;background:#eeeeee;color:#444;
+                          padding:6px 10px;border-radius:999px;text-decoration:none;">
+                  Mark as read
+                </a>
+              {% else %}
+                <span style="font-size:.8rem;color:#888;">Read</span>
+              {% endif %}
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div style="padding:32px;text-align:center;background:#fff;border-radius:14px;
+                border:1px solid #eee;box-shadow:0 2px 8px rgba(0,0,0,.03);">
+      <p style="margin:0;color:#777;">You have no notifications yet.</p>
+    </div>
+  {% endif %}
+</section>
+{% endblock %}
