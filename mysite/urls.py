@@ -50,6 +50,9 @@ urlpatterns = [
     path('orders/<int:order_id>/cancel/', views.order_cancel, name='order_cancel'),
     path('orders/<int:order_id>/paid/', views.order_mark_paid, name='order_mark_paid'),
 
+    # Invoice PDF
+    path('orders/<int:order_id>/invoice/', views.order_invoice_pdf, name='order_invoice_pdf'),
+
     # ===== Payment flow =====
     path('payment/start/<int:order_id>/', views.payment_start, name='payment_start'),
     path('payment/success/', views.payment_success, name='payment_success'),

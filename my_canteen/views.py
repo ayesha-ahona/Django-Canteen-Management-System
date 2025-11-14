@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import HttpResponseForbidden
+from django.http import HttpResponse, HttpResponseForbidden
 from django.db.models import Q, Avg, Count
 from django.contrib import messages
 from django.http import (
@@ -14,6 +14,8 @@ from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
 
 # ✅ Email verification imports
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -986,3 +988,79 @@ def toggle_favorite(request, item_id):
 def favorites_page(request):
     fav_items = Favorite.objects.filter(user=request.user).select_related("item")
     return render(request, "my_canteen/favorites.html", {"fav_items": fav_items})
+
+
+
+# ---------- PDF Invoice Generation ----------
+@login_required
+def order_invoice_pdf(request, order_id):
+    """
+    নির্দিষ্ট Order এর জন্য PDF Invoice জেনারেট করবে।
+    - Student/Faculty/Guest → শুধু নিজের অর্ডার ডাউনলোড করতে পারবে
+    - Vendor/Admin → যেকোনো অর্ডারের invoice ডাউনলোড করতে পারবে
+    """
+    order = get_object_or_404(Order, id=order_id)
+
+    # Permission check
+    if order.user != request.user and not require_roles(request.user, ["vendor", "admin"]):
+        return HttpResponseForbidden("You are not allowed to download this invoice.")
+
+    # PDF response ready
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename=\"order_{order.id}_invoice.pdf\"'
+
+    p = canvas.Canvas(response, pagesize=letter)
+    width, height = letter
+    y = height - 50
+
+    # Header
+    p.setFont("Helvetica-Bold", 16)
+    p.drawString(50, y, "CanteenX - Order Invoice")
+    y -= 30
+
+    # Basic info
+    p.setFont("Helvetica", 11)
+    p.drawString(50, y, f"Order ID: #{order.id}")
+    y -= 18
+
+    # created_at field থাকলে সুন্দরভাবে দেখাবে
+    try:
+        created = order.created_at.strftime("%Y-%m-%d %H:%M")
+    except AttributeError:
+        created = ""
+    p.drawString(50, y, f"Date: {created}")
+    y -= 18
+
+    p.drawString(50, y, f"Customer: {order.user.username}")
+    y -= 30
+
+    # Items
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, y, "Items:")
+    y -= 20
+    p.setFont("Helvetica", 11)
+
+    for oi in order.orderitem_set.all():
+        line = f"- {oi.item.name} x {oi.quantity} @ {oi.unit_price} Tk"
+        p.drawString(60, y, line)
+        y -= 16
+
+        # এক পেজ শেষ হয়ে গেলে নতুন পেজ
+        if y < 80:
+            p.showPage()
+            y = height - 50
+            p.setFont("Helvetica", 11)
+
+    y -= 10
+    p.setFont("Helvetica-Bold", 12)
+    p.drawString(50, y, f"Total: {order.total_price} Tk")
+    y -= 18
+
+    p.setFont("Helvetica", 11)
+    p.drawString(50, y, f"Payment Status: {order.payment_status.capitalize()}")
+    y -= 18
+    p.drawString(50, y, f"Order Status: {order.status.capitalize()}")
+
+    p.showPage()
+    p.save()
+    return response
