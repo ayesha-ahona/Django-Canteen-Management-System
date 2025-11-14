@@ -108,7 +108,7 @@ urlpatterns = [
     path("addresses/", views.address_book, name="address_book"),
     path("addresses/<int:pk>/delete/", views.address_delete, name="address_delete"),
     path("addresses/<int:pk>/default/", views.address_set_default, name="address_set_default"),
-#
+    path("addresses/", views.address_list, name="address_list"),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

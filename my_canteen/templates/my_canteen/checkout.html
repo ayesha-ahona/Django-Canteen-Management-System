@@ -6,8 +6,7 @@
   <h2 class="checkout-title">Checkout</h2>
 
   <div class="checkout-grid">
-
-    <!-- ========== LEFT : Order Items ========== -->
+    <!-- ========== LEFT : ITEMS ========== -->
     <div class="checkout-left">
       <h3>Order Items</h3>
 
@@ -37,14 +36,13 @@
       </table>
     </div>
 
-    <!-- ========== RIGHT : Address + Summary + Coupon + Payment ========== -->
+    <!-- ========== RIGHT : ADDRESS + SUMMARY + PAYMENT ========== -->
     <div class="checkout-right">
-
       <form method="post" class="checkout-form">
         {% csrf_token %}
 
-        <!-- ⭐ DELIVERY ADDRESS -->
-        <section class="address-box">
+        <!-- ===== Delivery Address ===== -->
+        <div class="address-box">
           <div class="address-header">
             <div>
               <h4>Delivery Address</h4>
@@ -52,86 +50,83 @@
             </div>
           </div>
 
-          {% if addresses %}
-            <div class="address-list">
-              {% for addr in addresses %}
-                <label class="address-card">
-                  <input
-                    type="radio"
-                    name="address_id"
-                    value="{{ addr.id }}"
-                    class="address-radio"
-                    {% if selected_address_id %}
-                      {% if addr.id|stringformat:"s" == selected_address_id|stringformat:"s" %}checked{% endif %}
-                    {% else %}
-                      {% if addr.is_default %}checked{% endif %}
-                    {% endif %}
-                  >
-                  <div class="address-body">
-                    <div class="address-title-row">
-                      <span class="address-label">{{ addr.label }}</span>
-                      {% if addr.is_default %}
-                        <span class="address-pill">Default</span>
-                      {% endif %}
-                    </div>
-                    <div class="address-lines">
-                      {{ addr.line1 }}
-                      {% if addr.line2 %}, {{ addr.line2 }}{% endif %},
-                      {{ addr.city }}
-                    </div>
-                    {% if addr.phone %}
-                      <div class="address-meta">
-                        📞 {{ addr.phone }}
-                      </div>
-                    {% endif %}
-                  </div>
-                </label>
-              {% endfor %}
-            </div>
-          {% endif %}
-
-          <!-- One-time address -->
-          <label class="address-card address-card--ghost">
-            <input
-              type="radio"
-              name="address_id"
-              value=""
-              class="address-radio"
-              {% if not selected_address_id %}checked{% endif %}
-            >
-            <div class="address-body">
-              <div class="address-title-row">
-                <span class="address-label">Use one-time address</span>
+          <div class="address-list">
+            <!-- One-time address option -->
+            <label class="address-card">
+              <div class="address-radio">
+                <input type="radio"
+                       name="address_mode"
+                       value="one_time"
+                       {% if address_mode != 'saved' %}checked{% endif %}>
               </div>
-              <p class="address-helper">
-                This address will be used only for this order.
-              </p>
 
-              <label class="address-text-label" for="id_address_text">
-                Address details
+              <div class="address-body">
+                <div class="address-title-row">
+                  <span class="address-label">Use one-time address</span>
+                  <span class="address-pill">This order only</span>
+                </div>
+
+                <p class="address-helper">
+                  Write a new address below just for this order.
+                </p>
+
+                <label class="address-text-label" for="id_one_time_address">
+                  Address details
+                </label>
+                <textarea id="id_one_time_address"
+                          name="one_time_address"
+                          class="address-textarea"
+                          rows="3"
+                          placeholder="Floor / room, building name, campus area, landmark…">{{ one_time_address }}</textarea>
+
+                <span class="address-example">
+                  Example: UAP Campus, Civil Building, Level 4, CSE Lab Front Desk.
+                </span>
+              </div>
+            </label>
+
+            {% if addresses %}
+              <!-- Saved address option -->
+              <label class="address-card address-card--ghost">
+                <div class="address-radio">
+                  <input type="radio"
+                         name="address_mode"
+                         value="saved"
+                         {% if address_mode == 'saved' %}checked{% endif %}>
+                </div>
+
+                <div class="address-body">
+                  <div class="address-title-row">
+                    <span class="address-label">Use saved address</span>
+                    <span class="address-pill">Address book</span>
+                  </div>
+
+                  <p class="address-helper">
+                    Deliver to one of your saved addresses.
+                  </p>
+
+                  <select name="saved_address_id" class="address-select">
+                    {% for addr in addresses %}
+                      <option value="{{ addr.id }}"
+                              {% if addr.id == selected_address_id %}selected{% endif %}>
+                        {{ addr.label }} — {{ addr.line1 }}{% if addr.city %}, {{ addr.city }}{% endif %}
+                      </option>
+                    {% endfor %}
+                  </select>
+                </div>
               </label>
-              <textarea
-                id="id_address_text"
-                name="address_text"
-                rows="3"
-                class="address-textarea"
-                placeholder="House, road, area, floor / room, landmark..."
-              >{{ address_text|default_if_none:"" }}</textarea>
-              <small class="address-example">
-                Example: UAP Campus, Civil Building, Level 4, CSE Lab Front Desk.
-              </small>
-            </div>
-          </label>
+            {% endif %}
+          </div>
 
           <div class="address-manage-link">
-            <a href="{% url 'address_book' %}" class="btn btn-soft">
+            <a href="{% url 'address_list' %}" class="btn btn-soft">
               Manage saved addresses
             </a>
           </div>
-        </section>
+        </div>
 
-        <!-- 💰 Order summary -->
-        <section class="summary-box">
+        <!-- ===== Order Summary ===== -->
+        <div class="summary-box">
           <h4>Order Summary</h4>
 
           <div class="summary-row">
@@ -156,11 +151,11 @@
             <span>Payable Total</span>
             <span>{{ grand_total }} Tk</span>
           </div>
-        </section>
+        </div>
 
-        <!-- 🎟 Coupon / Promo -->
-        <section class="coupon-box">
-          <h4>Coupon / Promo Code</h4>
+        <!-- ===== Coupon / Promo ===== -->
+        <div class="coupon-box">
+          <label for="id_coupon_code">Coupon / Promo Code</label>
           <div class="coupon-input">
             <input type="text"
                    id="id_coupon_code"
@@ -172,16 +167,18 @@
             </button>
           </div>
           <small class="muted">
-            Try: <strong>FOOD10</strong>, <strong>WELCOME20</strong>, <strong>STUDENT5</strong>,
+            Try codes:
+            <strong>FOOD10</strong>, <strong>WELCOME20</strong>, <strong>STUDENT5</strong>,
             <strong>FESTIVE15</strong>, <strong>VIP25</strong>, <strong>HAPPY30</strong>,
             <strong>SAVE30</strong>, <strong>MEAL40</strong>, <strong>BUDGET35</strong>,
             <strong>SNACK15</strong>, <strong>LUNCH20</strong>
           </small>
-        </section>
+        </div>
 
-        <!-- 💳 Payment method -->
-        <section class="payment-box">
+        <!-- ===== Payment method ===== -->
+        <div class="payment-box">
           <h4>Payment Method</h4>
+
           <div class="payment-options">
             {{ form.payment_method }}
           </div>
@@ -198,7 +195,7 @@
             </div>
             <small class="muted">Demo only — no real charge.</small>
           </div>
-        </section>
+        </div>
 
         <button type="submit" class="pay-now-btn">
           Place Order &amp; Pay
@@ -208,7 +205,6 @@
       <div class="checkout-back-link">
         <a href="{% url 'cart' %}" class="btn btn-soft">&larr; Back to Cart</a>
       </div>
-
     </div>
   </div>
 </div>

@@ -1,0 +1,30 @@
+{% extends "my_canteen/base.html" %}
+{% block content %}
+
+<div class="container">
+
+  <h2>Your Saved Addresses</h2>
+
+  <a href="{% url 'address_add' %}" class="btn">Add New Address</a>
+
+  <div style="margin-top:20px;">
+    {% for addr in addresses %}
+      <div class="address-card" style="padding:15px; background:#fff; border:1px solid #eee; margin-bottom:10px;">
+        <strong>{{ addr.label }}</strong>  
+        <p>{{ addr.line1 }} {{ addr.line2 }} {{ addr.city }}</p>
+        {% if addr.phone %}
+          <p><b>Phone:</b> {{ addr.phone }}</p>
+        {% endif %}
+
+        {% if addr.is_default %}
+          <span class="badge badge-success">Default</span>
+        {% endif %}
+      </div>
+    {% empty %}
+      <p>You have no saved addresses.</p>
+    {% endfor %}
+  </div>
+
+</div>
+
+{% endblock %}

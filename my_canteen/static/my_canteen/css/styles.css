@@ -1713,3 +1713,18 @@ a {
         width: 100%;
     }
 }
+
+.address-select {
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 0.9rem;
+  background: #fff;
+}
+
+.address-select:focus {
+  outline: none;
+  border-color: #c62828;
+  box-shadow: 0 0 0 2px rgba(198, 40, 40, 0.12);
+}
