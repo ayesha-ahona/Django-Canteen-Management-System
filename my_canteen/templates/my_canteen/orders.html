@@ -9,7 +9,8 @@
   </div>
 
   <p style="color:#666;margin-bottom:18px;">
-    Track your orders in real-time and cancel if needed <em>(before preparing)</em>.
+    Track your orders in real-time, cancel if needed
+    <em>(before preparing)</em> and reorder your favourite meals in one click. 🔁
   </p>
 
   <!-- ফ্ল্যাশ মেসেজ দেখানোর জায়গা -->
@@ -79,14 +80,15 @@
 
             <td style="padding:14px 16px;">
               <div style="display:flex;flex-wrap:wrap;gap:6px;">
-                <!-- 📄 PDF Invoice Download button -->
+
+                <!-- 📄 PDF Invoice Download -->
                 <a href="{% url 'order_invoice_pdf' order.id %}"
                    class="btn"
                    style="background:#ffffff;color:#c62828;border:1px solid #ffcdd2;border-radius:10px;padding:7px 12px;font-size:.85rem;">
                   📄 Invoice (PDF)
                 </a>
 
-                <!-- Cancel / disabled cancel -->
+                <!-- ❌ Cancel / Disabled Cancel -->
                 {% if order.id in cancelable_ids %}
                   <form action="{% url 'user_order_cancel' order.id %}" method="post" style="display:inline;">
                     {% csrf_token %}
@@ -102,6 +104,20 @@
                     Cancel
                   </button>
                 {% endif %}
+
+                <!-- 🔁 Reorder button: only delivered/completed -->
+                {% if order.status == "delivered" or order.status == "completed" %}
+                  <form action="{% url 'reorder_order' order.id %}"
+                        method="post"
+                        style="display:inline;">
+                    {% csrf_token %}
+                    <button type="submit"
+                            style="background:#ffffff;border:1px solid #c62828;color:#c62828;border-radius:10px;padding:7px 14px;cursor:pointer;font-size:.85rem;">
+                      🔁 Reorder
+                    </button>
+                  </form>
+                {% endif %}
+
               </div>
             </td>
           </tr>

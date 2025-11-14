@@ -975,6 +975,56 @@ def user_order_cancel(request, order_id):
     return redirect("orders")
 
 
+@login_required
+def reorder_order(request, order_id):
+    """
+    Previous order থেকে সব available item আবার cart এ add করে।
+    শুধু নিজে যে order করেছিল সেটা এবং delivered/completed order এর জন্য।
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # শুধুমাত্র delivered / completed order থেকে reorder allow করব
+    if order.status not in ["delivered", "completed"]:
+        messages.error(request, "You can reorder only delivered or completed orders.")
+        return redirect("orders")
+
+    # current cart
+    cart = request.session.get("cart", {})
+    added_any = False
+
+    # অর্ডারের সব item ঘুরে দেখা
+    for oi in order.orderitem_set.select_related("item"):
+        item = oi.item
+
+        # item ইনঅ্যাকটিভ বা stock নেই → skip
+        if not item.is_active or item.stock <= 0:
+            continue
+
+        # আগের order এ যত ছিল, stock এর মধ্যে থাকলে ততটাই add করবে
+        qty = min(oi.quantity, item.stock)
+        if qty <= 0:
+            continue
+
+        cart_key = str(item.id)
+        cart[cart_key] = cart.get(cart_key, 0) + qty
+        added_any = True
+
+    request.session["cart"] = cart
+
+    if added_any:
+        messages.success(
+            request,
+            f"Items from order #{order.id} have been added to your cart."
+        )
+        return redirect("cart")
+    else:
+        messages.warning(
+            request,
+            "No items from this order are available to reorder right now."
+        )
+        return redirect("orders")
+
+
 # ---------- Vendor CRUD for Menu Items ----------
 
 @login_required

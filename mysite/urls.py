@@ -49,6 +49,7 @@ urlpatterns = [
     path('orders/<int:order_id>/completed/', views.order_completed, name='order_completed'),
     path('orders/<int:order_id>/cancel/', views.order_cancel, name='order_cancel'),
     path('orders/<int:order_id>/paid/', views.order_mark_paid, name='order_mark_paid'),
+    path("orders/<int:order_id>/reorder/", views.reorder_order, name="reorder_order"),
 
     # Invoice PDF
     path('orders/<int:order_id>/invoice/', views.order_invoice_pdf, name='order_invoice_pdf'),
