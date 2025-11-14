@@ -6,7 +6,6 @@
 
   {% if items %}
     <div class="cart-grid">
-
       <!-- LEFT: Cart items table -->
       <div class="cart-left">
         <table class="orders-table pretty cart-table">
@@ -35,13 +34,13 @@
               <!-- SMART ADD Quantity -->
               <td class="cart-qty">
                 <div class="cart-qty-inner">
-                  <!-- minus -->
+                  <!-- − button -->
                   <a href="{% url 'decrease_cart_qty' entry.item.id %}" class="qty-btn">−</a>
 
                   <!-- current qty -->
                   <span class="qty-value">{{ entry.qty }}</span>
 
-                  <!-- plus -->
+                  <!-- + button -->
                   <a href="{% url 'increase_cart_qty' entry.item.id %}" class="qty-btn">+</a>
                 </div>
               </td>
@@ -89,10 +88,47 @@
           </a>
         </div>
       </div>
-
     </div>
-  {% else %}
 
+    {# ✨ Extra suggestion block: "আর কিছু নেবেন?" #}
+    {% if recommended %}
+      <hr class="divider">
+      <div class="recommended">
+        <h3>✨ Add More To Your Order</h3>
+        <p class="muted">Based on popular picks, you may also like:</p>
+
+        <div class="card-grid">
+          {% for item in recommended %}
+            <div class="card surface">
+              <a class="card-media" href="{% url 'item_detail' item.id %}">
+                {% if item.image %}
+                  <img src="{{ item.image.url }}" alt="{{ item.name }}">
+                {% else %}
+                  <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
+                {% endif %}
+                {% if item.is_popular %}
+                  <span class="badge info">Popular</span>
+                {% endif %}
+              </a>
+
+              <a class="card-title" href="{% url 'item_detail' item.id %}">
+                {{ item.name }}
+              </a>
+
+              <div class="card-meta">
+                <span class="price"><strong>{{ item.price }} Tk</strong></span>
+              </div>
+
+              <a href="{% url 'add_to_cart' item.id %}" class="btn">
+                + Add to Cart
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+  {% else %}
     <!-- Empty cart -->
     <div class="empty-state">
       <img src="https://via.placeholder.com/120?text=Empty+Cart" alt="Empty cart">
@@ -100,7 +136,6 @@
       <p class="muted">Add some tasty food from the menu.</p>
       <a href="{% url 'menu' %}" class="btn">Browse Menu</a>
     </div>
-
   {% endif %}
 </div>
 

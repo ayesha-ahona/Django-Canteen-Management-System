@@ -482,7 +482,25 @@ def view_cart(request):
         except MenuItem.DoesNotExist:
             continue
 
-    return render(request, "my_canteen/cart.html", {"items": items, "total": total})
+    # 👍 cart এ already যেগুলো আছে, সেগুলোর id list
+    cart_item_ids = [entry["item"].id for entry in items]
+
+    # ✨ Extra item suggestion (Pathao style)
+    recommended = (
+        MenuItem.objects.filter(is_active=True, stock__gt=0)
+        .exclude(id__in=cart_item_ids)          # cart-এ নাই
+        .order_by("-is_popular", "name")[:6]    # popular + name দিয়ে sort
+    )
+
+    return render(
+        request,
+        "my_canteen/cart.html",
+        {
+            "items": items,
+            "total": total,
+            "recommended": recommended,   # 👉 template এ পাঠাচ্ছি
+        },
+    )
 
 
 # ---------- Checkout + Payment ----------
