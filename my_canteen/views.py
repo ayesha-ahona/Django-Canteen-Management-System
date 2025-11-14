@@ -570,18 +570,24 @@ def checkout(request):
         cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
         total += subtotal
 
-    # ✅ এই লাইন নতুন: user er saved address gulo
-    user_addresses = Address.objects.filter(user=request.user).order_by(
-        "-is_default", "-created_at"
-    )
+    # ✅ Address book: current user-er saved addresses
+    addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
 
     # default values
     coupon_code = ""
     discount_amount = 0
     grand_total = total
 
+    # form er jonno extra helper variable
+    selected_address_id = None
+    address_text = ""
+
     if request.method == "POST":
         form = CheckoutPaymentForm(request.POST)
+
+        # ----- address form data niye nei -----
+        selected_address_id = request.POST.get("address_id") or None
+        address_text = request.POST.get("address_text", "").strip()
 
         # ---------- COUPON ----------
         coupon_code = request.POST.get("coupon_code", "").strip().upper()
@@ -592,7 +598,7 @@ def checkout(request):
         else:
             grand_total = total
 
-        # শুধু coupon apply করলে (Apply button)
+        # শুধু coupon apply করা হচ্ছে? (Apply button e name="apply_coupon")
         if "apply_coupon" in request.POST:
             if coupon_code and not discount_percent:
                 messages.error(request, "Invalid or expired coupon code.")
@@ -601,6 +607,7 @@ def checkout(request):
                     request,
                     f"Coupon {coupon_code} applied ({discount_percent}% off)."
                 )
+            # order create না করে শুধু page re-render
             return render(
                 request,
                 "my_canteen/checkout.html",
@@ -611,7 +618,9 @@ def checkout(request):
                     "coupon_code": coupon_code,
                     "discount_amount": discount_amount,
                     "grand_total": grand_total,
-                    "addresses": user_addresses,   # ✅ এখানে পাঠাচ্ছি
+                    "addresses": addresses,
+                    "selected_address_id": selected_address_id,
+                    "address_text": address_text,
                 },
             )
 
@@ -619,26 +628,32 @@ def checkout(request):
         if form.is_valid():
             method = form.cleaned_data["payment_method"]
 
-            # ✅ ফর্ম থেকে নির্বাচিত address বের করছি
-            addr_text = "Default Address"
-            addr_id = request.POST.get("address_id")
-            if addr_id:
+            # 🔹 কোন address string use korbo?
+            address_str = "Default Address"
+
+            # 1) jodi saved address select kore
+            if selected_address_id:
                 try:
-                    addr = user_addresses.get(id=addr_id)
-                    parts = [addr.line1]
-                    if addr.line2:
-                        parts.append(addr.line2)
-                    if addr.city:
-                        parts.append(addr.city)
-                    addr_text = ", ".join(parts)
+                    addr_obj = Address.objects.get(
+                        id=selected_address_id, user=request.user
+                    )
+                    line2_part = f", {addr_obj.line2}" if addr_obj.line2 else ""
+                    address_str = (
+                        f"{addr_obj.label}: {addr_obj.line1}{line2_part}, "
+                        f"{addr_obj.city}"
+                    )
                 except Address.DoesNotExist:
                     pass
+
+            # 2) jodi nijer likha one-time address thake
+            elif address_text:
+                address_str = address_text
 
             # Order create
             order = Order.objects.create(
                 user=request.user,
                 total_price=grand_total,
-                address=addr_text,      # ✅ এখানে save হচ্ছে
+                address=address_str,
                 status="pending",
                 payment_status="unpaid",
                 payment_method=method,
@@ -664,7 +679,7 @@ def checkout(request):
                 status="pending",
             )
 
-            # সবগুলো demo: cash, mock_card, bkash, nagad
+            # সবগুলোই demo: cash, mock_card, bkash, nagad
             if method in ["cash", "mock_card", "bkash", "nagad"]:
                 payment.status = "paid"
                 payment.paid_at = timezone.now()
@@ -676,17 +691,23 @@ def checkout(request):
                 order.payment_status = "paid"
                 order.save()
 
+                # cart clear
                 request.session["cart"] = {}
 
+                # আলাদা আলাদা message
                 msg_map = {
                     "cash": "Cash payment order placed successfully!",
                     "mock_card": "Mock Card payment successful!",
                     "bkash": "bKash payment recorded (demo).",
                     "nagad": "Nagad payment recorded (demo).",
                 }
-                messages.success(request, msg_map.get(method, "Order placed successfully!"))
+                messages.success(
+                    request,
+                    msg_map.get(method, "Order placed successfully!")
+                )
                 return redirect("payment_success")
 
+            # future: stripe / sslcommerz থাকলে এখানে handle করো
             messages.info(request, "Selected gateway is not ready yet.")
             return redirect("payment_failed")
 
@@ -695,7 +716,9 @@ def checkout(request):
         form = CheckoutPaymentForm()
         grand_total = total  # no coupon yet
 
-    # --- Render page (GET / invalid form) ---
+        # default address select korte chaile ekhane logic dite paro
+
+    # --- Render page (default / GET / invalid form) ---
     return render(
         request,
         "my_canteen/checkout.html",
@@ -706,10 +729,11 @@ def checkout(request):
             "coupon_code": coupon_code,
             "discount_amount": discount_amount,
             "grand_total": grand_total,
-            "addresses": user_addresses,   # ✅ এখানেও পাঠাতে হবে
+            "addresses": addresses,
+            "selected_address_id": selected_address_id,
+            "address_text": address_text,
         },
     )
-
 
 def payment_start(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
