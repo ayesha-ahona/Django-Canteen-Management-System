@@ -478,21 +478,54 @@ def update_cart(request, item_id):
 @login_required
 def view_cart(request):
     cart = request.session.get("cart", {})
-    items, total = [], 0
+    items = []
+    total = 0
 
+    item_ids = []
+
+    # মূল cart items + total হিসাব
     for item_id, qty in cart.items():
         try:
             item = MenuItem.objects.get(id=item_id, is_active=True)
-            subtotal = float(item.price) * qty
-            items.append({"item": item, "qty": qty, "subtotal": subtotal})
-            total += subtotal
         except MenuItem.DoesNotExist:
             continue
 
-    return render(request, "my_canteen/cart.html", {"items": items, "total": total})
+        subtotal = float(item.price) * qty
+        items.append({"item": item, "qty": qty, "subtotal": subtotal})
+        total += subtotal
+        item_ids.append(item.id)
 
+    # ---------- SMART EXTRA ITEMS ----------
+    suggested_items = []
+    if items:  # cart এ কিছু থাকলেই extra suggest করব
+        # cart এ থাকা item গুলোর category গুলো বের করি
+        cat_ids = {
+            entry["item"].category_id
+            for entry in items
+            if entry["item"].category_id
+        }
 
-# ---------- Checkout + Payment ----------
+        qs = MenuItem.objects.filter(is_active=True)
+
+        # সেই category গুলো থেকে popular items
+        if cat_ids:
+            qs = qs.filter(category_id__in=cat_ids)
+
+        # ইতিমধ্যে cart এ আছে এমন গুলো বাদ
+        if item_ids:
+            qs = qs.exclude(id__in=item_ids)
+
+        suggested_items = list(
+            qs.order_by("-is_popular", "name")[:4]  # সর্বোচ্চ ৪টা extra
+        )
+
+    context = {
+        "items": items,
+        "total": total,
+        "suggested_items": suggested_items,
+    }
+    return render(request, "my_canteen/cart.html", context)
+
 # ---------- Checkout + Payment ----------
 @login_required
 def checkout(request):

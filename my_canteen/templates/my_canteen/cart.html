@@ -90,9 +90,48 @@
         </div>
       </div>
 
-    </div>
-  {% else %}
+    </div>  <!-- /cart-grid -->
 
+    {# ---------- EXTRA ITEMS SECTION (Pathao style) ---------- #}
+    {% if suggested_items %}
+      <div class="cart-extras">
+        <h3>Want to add something extra?</h3>
+        <p class="muted" style="margin-bottom:10px;">
+          People often order these with your selection:
+        </p>
+
+        <div class="card-grid">
+          {% for extra in suggested_items %}
+            <div class="card surface">
+              <a class="card-media" href="{% url 'item_detail' extra.id %}">
+                {% if extra.image %}
+                  <img src="{{ extra.image.url }}" alt="{{ extra.name }}">
+                {% else %}
+                  <img src="https://via.placeholder.com/300x200?text=Extra+Item"
+                       alt="{{ extra.name }}">
+                {% endif %}
+              </a>
+
+              <a class="card-title" href="{% url 'item_detail' extra.id %}">
+                {{ extra.name }}
+              </a>
+
+              <div class="card-meta">
+                <span class="price"><strong>{{ extra.price }} Tk</strong></span>
+              </div>
+
+              <a href="{% url 'add_to_cart' extra.id %}"
+                 class="btn btn-soft"
+                 style="margin-top:auto;">
+                + Add to Cart
+              </a>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
+  {% else %}
     <!-- Empty cart -->
     <div class="empty-state">
       <img src="https://via.placeholder.com/120?text=Empty+Cart" alt="Empty cart">
@@ -100,7 +139,6 @@
       <p class="muted">Add some tasty food from the menu.</p>
       <a href="{% url 'menu' %}" class="btn">Browse Menu</a>
     </div>
-
   {% endif %}
 </div>
 
