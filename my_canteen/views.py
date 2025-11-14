@@ -10,6 +10,7 @@ from django.http import (
     JsonResponse,
     HttpResponse,
 )
+import io
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -18,6 +19,8 @@ from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
+from reportlab.lib import colors
+
 
 # ✅ Email verification imports
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -996,73 +999,142 @@ def favorites_page(request):
 # ---------- PDF Invoice Generation ----------
 @login_required
 def order_invoice_pdf(request, order_id):
-    """
-    নির্দিষ্ট Order এর জন্য PDF Invoice জেনারেট করবে।
-    - Student/Faculty/Guest → শুধু নিজের অর্ডার ডাউনলোড করতে পারবে
-    - Vendor/Admin → যেকোনো অর্ডারের invoice ডাউনলোড করতে পারবে
-    """
-    order = get_object_or_404(Order, id=order_id)
+    # অর্ডারটা বের করি, যাতে অন্য ইউজারের অর্ডার ডাউনলোড না করতে পারে
+    order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    # Permission check
-    if order.user != request.user and not require_roles(request.user, ["vendor", "admin"]):
-        return HttpResponseForbidden("You are not allowed to download this invoice.")
+    # ----- PDF buffer & canvas -----
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    margin = 20 * mm
 
-    # PDF response ready
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename=\"order_{order.id}_invoice.pdf\"'
+    # ================= HEADER BAND =================
+    header_h = 25 * mm
+    c.setFillColor(colors.HexColor("#c62828"))
+    c.rect(0, height - header_h, width, header_h, fill=1, stroke=0)
 
-    p = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
-    y = height - 50
+    c.setFillColor(colors.white)
+    c.setFont("Helvetica-Bold", 20)
+    c.drawString(margin, height - header_h + 10 * mm, "UAP CanteenX")
 
-    # Header
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(50, y, "CanteenX - Order Invoice")
-    y -= 30
+    c.setFont("Helvetica", 11)
+    c.drawString(margin, height - header_h + 4 * mm, "Order Invoice")
 
-    # Basic info
-    p.setFont("Helvetica", 11)
-    p.drawString(50, y, f"Order ID: #{order.id}")
-    y -= 18
+    # ================= ORDER & CUSTOMER INFO =================
+    y_left = height - header_h - 15 * mm
+    c.setFillColor(colors.black)
 
-    # created_at field থাকলে সুন্দরভাবে দেখাবে
-    try:
-        created = order.created_at.strftime("%Y-%m-%d %H:%M")
-    except AttributeError:
-        created = ""
-    p.drawString(50, y, f"Date: {created}")
-    y -= 18
+    # Left side: order info
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(margin, y_left, "Order Details")
 
-    p.drawString(50, y, f"Customer: {order.user.username}")
-    y -= 30
+    c.setFont("Helvetica", 11)
+    y_left -= 16
+    c.drawString(margin, y_left, f"Order ID: #{order.id}")
+    y_left -= 14
+    c.drawString(margin, y_left, f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}")
 
-    # Items
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(50, y, "Items:")
+    # Right side: customer info
+    info_x = width / 2
+    y_right = height - header_h - 15 * mm
+
+    c.setFont("Helvetica-Bold", 12)
+    c.drawString(info_x, y_right, "Customer")
+
+    c.setFont("Helvetica", 11)
+    y_right -= 16
+    c.drawString(info_x, y_right, f"Name: {order.user.username}")
+    y_right -= 14
+    c.drawString(info_x, y_right, f"Payment: {order.payment_status.title()}")
+    y_right -= 14
+    c.drawString(info_x, y_right, f"Status: {order.status.title()}")
+
+    # ================= SEPARATOR =================
+    y = min(y_left, y_right) - 22
+    c.setStrokeColor(colors.lightgrey)
+    c.setLineWidth(0.8)
+    c.line(margin, y, width - margin, y)
+
+    # ================= ITEMS TABLE =================
     y -= 20
-    p.setFont("Helvetica", 11)
+    c.setFont("Helvetica-Bold", 12)
+    c.setFillColor(colors.black)
+    c.drawString(margin, y + 8, "Items")
+
+    y -= 18
+    row_h = 18
+    col_name = margin
+    col_qty = margin + 72 * mm
+    col_price = margin + 97 * mm
+    col_subtotal = margin + 127 * mm
+
+    # Table header background
+    c.setFillColor(colors.whitesmoke)
+    c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
+
+    # Header texts
+    c.setFillColor(colors.black)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawString(col_name + 4, y + 4, "Item")
+    c.drawString(col_qty + 4, y + 4, "Qty")
+    c.drawString(col_price + 4, y + 4, "Price")
+    c.drawString(col_subtotal + 4, y + 4, "Subtotal")
+
+    # Rows
+    y -= row_h
+    c.setFont("Helvetica", 10)
 
     for oi in order.orderitem_set.all():
-        line = f"- {oi.item.name} x {oi.quantity} @ {oi.unit_price} Tk"
-        p.drawString(60, y, line)
-        y -= 16
+        # নতুন পেজ লাগলে
+        if y < 80 * mm:
+            c.showPage()
+            c = canvas.Canvas(buffer, pagesize=A4)
+            width, height = A4
+            margin = 20 * mm
+            y = height - margin
 
-        # এক পেজ শেষ হয়ে গেলে নতুন পেজ
-        if y < 80:
-            p.showPage()
-            y = height - 50
-            p.setFont("Helvetica", 11)
+        c.setFillColor(colors.white)
+        c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
+        c.setFillColor(colors.black)
 
-    y -= 10
-    p.setFont("Helvetica-Bold", 12)
-    p.drawString(50, y, f"Total: {order.total_price} Tk")
-    y -= 18
+        # কলাম অনুযায়ী ডাটা
+        c.drawString(col_name + 4, y + 4, oi.item.name[:30])
+        c.drawString(col_qty + 4, y + 4, str(oi.quantity))
+        c.drawRightString(col_price + 35, y + 4, f"{oi.item.price:.2f} Tk")
 
-    p.setFont("Helvetica", 11)
-    p.drawString(50, y, f"Payment Status: {order.payment_status.capitalize()}")
-    y -= 18
-    p.drawString(50, y, f"Order Status: {order.status.capitalize()}")
+        subtotal = float(oi.item.price) * oi.quantity
+        c.drawRightString(col_subtotal + 40, y + 4, f"{subtotal:.2f} Tk")
 
-    p.showPage()
-    p.save()
+        y -= row_h
+
+    # ================= TOTAL BOX =================
+    y -= 22
+    c.setStrokeColor(colors.HexColor("#c62828"))
+    c.setLineWidth(1.2)
+    c.rect(col_price - 10, y - 6, (width - margin) - (col_price - 10), 24,
+           fill=0, stroke=1)
+
+    c.setFont("Helvetica-Bold", 12)
+    c.setFillColor(colors.black)
+    c.drawString(col_price, y + 2, "Total:")
+    c.drawRightString(width - margin - 6, y + 2, f"{order.total_price:.2f} Tk")
+
+    # ================= FOOTER =================
+    footer_y = 25 * mm
+    c.setStrokeColor(colors.lightgrey)
+    c.setLineWidth(0.6)
+    c.line(margin, footer_y + 10, width - margin, footer_y + 10)
+
+    c.setFont("Helvetica-Oblique", 9)
+    c.setFillColor(colors.grey)
+    c.drawString(margin, footer_y, "Thank you for ordering from UAP CanteenX ❤")
+    c.drawRightString(width - margin, footer_y, "This is a system generated invoice.")
+
+    # Finish
+    c.save()
+    buffer.seek(0)
+
+    filename = f"order_{order.id}_invoice.pdf"
+    response = HttpResponse(buffer, content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
     return response
