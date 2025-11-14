@@ -6,6 +6,7 @@
 
   {% if items %}
     <div class="cart-grid">
+
       <!-- LEFT: Cart items table -->
       <div class="cart-left">
         <table class="orders-table pretty cart-table">
@@ -13,7 +14,7 @@
             <tr>
               <th>Food</th>
               <th>Price</th>
-              <th style="width:150px;">Quantity</th>
+              <th style="width:170px;">Quantity</th>
               <th>Subtotal</th>
               <th class="actions-col">Actions</th>
             </tr>
@@ -21,28 +22,31 @@
           <tbody>
           {% for entry in items %}
             <tr>
+              <!-- Food name -->
               <td>
                 <div class="order-line">
                   <span class="dot"></span>{{ entry.item.name }}
                 </div>
               </td>
+
+              <!-- Price -->
               <td>{{ entry.item.price }} Tk</td>
 
-              <!-- Quantity + Update -->
+              <!-- SMART ADD Quantity -->
               <td class="cart-qty">
-                <form method="post"
-                      action="{% url 'update_cart' entry.item.id %}">
-                  {% csrf_token %}
-                  <div class="cart-qty-inner">
-                    <input type="number"
-                           name="qty"
-                           min="1"
-                           value="{{ entry.qty }}">
-                    <button type="submit" class="btn btn-soft">Update</button>
-                  </div>
-                </form>
+                <div class="cart-qty-inner">
+                  <!-- minus -->
+                  <a href="{% url 'decrease_cart_qty' entry.item.id %}" class="qty-btn">−</a>
+
+                  <!-- current qty -->
+                  <span class="qty-value">{{ entry.qty }}</span>
+
+                  <!-- plus -->
+                  <a href="{% url 'increase_cart_qty' entry.item.id %}" class="qty-btn">+</a>
+                </div>
               </td>
 
+              <!-- Subtotal -->
               <td>{{ entry.subtotal }} Tk</td>
 
               <!-- Remove -->
@@ -85,8 +89,10 @@
           </a>
         </div>
       </div>
+
     </div>
   {% else %}
+
     <!-- Empty cart -->
     <div class="empty-state">
       <img src="https://via.placeholder.com/120?text=Empty+Cart" alt="Empty cart">
@@ -94,6 +100,7 @@
       <p class="muted">Add some tasty food from the menu.</p>
       <a href="{% url 'menu' %}" class="btn">Browse Menu</a>
     </div>
+
   {% endif %}
 </div>
 
