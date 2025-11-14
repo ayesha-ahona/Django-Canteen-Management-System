@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Invoice #{{ order.id }}</title>
+    <style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 12px; }
+        h1, h2, h3 { margin: 0; padding: 0; }
+        .header { text-align: center; margin-bottom: 20px; }
+
+        .section { margin-bottom: 15px; }
+
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        th, td { border: 1px solid #333; padding: 5px; text-align: left; }
+        .right { text-align: right; }
+        .total-row td { font-weight: bold; background: #f2f2f2; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>My Canteen</h1>
+        <p><strong>Invoice / Receipt</strong></p>
+    </div>
+
+    <!-- Order Information -->
+    <div class="section">
+        <strong>Order ID:</strong> {{ order.id }}<br>
+        <strong>Order Date:</strong> {{ order.created_at }}<br>
+        <strong>Status:</strong> {{ order.get_status_display }}<br>
+    </div>
+
+    <!-- Customer Information -->
+    <div class="section">
+        <strong>Customer:</strong> {{ order.user.get_full_name|default:order.user.username }}<br>
+        <strong>Email:</strong> {{ order.user.email }}<br>
+        <strong>Delivery Address:</strong> {{ order.address }}
+    </div>
+
+    <!-- Item Table -->
+    <table>
+        <thead>
+            <tr>
+                <th>Item</th>
+                <th class="right">Qty</th>
+                <th class="right">Unit Price</th>
+                <th class="right">Subtotal</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <!-- ORDER ITEM FIELDS -->
+                <td>{{ item.item.name }}</td>
+                <td class="right">{{ item.quantity }}</td>
+                <td class="right">{{ item.unit_price }}</td>
+                <td class="right">{{ item.line_total }}</td>
+            </tr>
+            {% endfor %}
+
+            <tr class="total-row">
+                <td colspan="3" class="right">Total</td>
+                <td class="right">{{ order.total_price }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Payment Section -->
+    <div class="section" style="margin-top: 20px;">
+        <h3>Payment Details</h3>
+        <strong>Payment Status:</strong> {{ order.get_payment_status_display }}<br>
+        <strong>Payment Method:</strong> {{ order.get_payment_method_display }}<br>
+    </div>
+
+    <p style="margin-top: 30px; font-size: 11px;">
+        Thank you for your order!<br>
+        This is a system-generated invoice.
+    </p>
+
+</body>
+</html>

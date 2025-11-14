@@ -93,6 +93,13 @@
                   Cancel
                 </button>
               {% endif %}
+
+              {% if order.is_paid %}
+                <a href="{% url 'invoice_pdf' order.id %}"
+                   style="display:inline-block;margin-top:6px;background:#ffffff;border:1px solid #c62828;color:#c62828;border-radius:10px;padding:6px 12px;font-size:.85rem;text-decoration:none;">
+                  Invoice (PDF)
+                </a>
+              {% endif %}
             </td>
           </tr>
           {% empty %}

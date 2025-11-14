@@ -9,6 +9,7 @@ from django.http import (
     HttpResponseRedirect,
     JsonResponse,
     HttpResponse,
+    Http404,
 )
 from django.urls import reverse
 from django.utils import timezone
@@ -19,11 +20,14 @@ from django.conf import settings
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
-from django.template.loader import render_to_string
+from django.template.loader import render_to_string, get_template
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.core.paginator import Paginator
+
+from xhtml2pdf import pisa  # <-- PDF library
+
 from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, Payment, Favorite
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm, MenuItemForm
 
@@ -50,6 +54,7 @@ class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
         profile = getattr(user, 'userprofile', None)
         verified = '1' if profile and profile.email_verified else '0'
         return f"{user.pk}{timestamp}{user.is_active}{verified}"
+
 
 email_token_generator = EmailVerificationTokenGenerator()
 
@@ -91,11 +96,11 @@ def signup_page(request):
 
             role = form.cleaned_data.get('role', 'guest')
             phone = form.cleaned_data.get('phone')
-            
+
             # প্রথম ইউজারকে admin
             if User.objects.count() == 1:
                 role = "admin"
-            
+
             profile = user.userprofile
             valid_roles = ["admin", "student", "faculty", "staff", "vendor", "guest"]
             profile.role = role if role in valid_roles else "guest"
@@ -140,7 +145,7 @@ def resend_verification(request):
     if profile.email_verified:
         messages.info(request, "Your email is already verified.")
         return redirect('dashboard')
-    
+
     send_verification_email(request, request.user)
     messages.success(request, "Verification link sent again to your email.")
     return redirect('login')
@@ -191,6 +196,7 @@ def can_user_cancel(order, user) -> bool:
 
 from django.db.models import Count
 
+
 def get_user_top_categories(user, limit=3):
     """
     ইউজার কোন কোন category থেকে বেশি খাবার খেয়েছে
@@ -240,7 +246,6 @@ def get_recommended_items(user, base_item=None, limit=6):
     qs = qs.order_by("-is_popular", "name")
 
     return qs[:limit]
-
 
 
 # ---------- Home ----------
@@ -303,7 +308,6 @@ def menu_page(request):
         "recommended_items": recommended_items,
     }
     return render(request, 'my_canteen/menu.html', context)
-
 
 
 # ---------- Item Detail + Reviews ----------
@@ -576,6 +580,7 @@ def checkout(request):
         },
     )
 
+
 def payment_start(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     payment = order.payment
@@ -623,6 +628,43 @@ def payment_success(request):
 
 def payment_failed(request):
     return render(request, "my_canteen/payment_failed.html")
+
+
+# ---------- ✅ NEW: Invoice PDF generator ----------
+@login_required
+def invoice_pdf(request, order_id):
+    """
+    Logged-in user nijer order er jonno PDF invoice download korte parbe.
+    Sudhu paid order (payment_status='paid') er jonno allow.
+    """
+    order = get_object_or_404(Order, id=order_id, user=request.user)
+
+    # invoice sudhu paid order er jonno
+    if not order.is_paid:
+        raise Http404("Invoice is available only for paid orders.")
+
+    # order items & optional payment object
+    items = OrderItem.objects.filter(order=order).select_related("item")
+    payment = getattr(order, "payment", None)
+
+    template = get_template("my_canteen/invoice.html")
+    html = template.render(
+        {
+            "order": order,
+            "items": items,
+            "payment": payment,
+        }
+    )
+
+    response = HttpResponse(content_type="application/pdf")
+    response["Content-Disposition"] = f'attachment; filename="invoice_{order.id}.pdf"'
+
+    pisa_status = pisa.CreatePDF(html, dest=response)
+
+    if pisa_status.err:
+        return HttpResponse("Error generating invoice PDF", status=500)
+
+    return response
 
 
 @csrf_exempt
@@ -894,7 +936,7 @@ def vendor_item_list(request):
         return redirect("home")
 
     q = request.GET.get("q", "").strip()
-    
+
     qs = MenuItem.objects.all().order_by("-is_active", "name")
 
     if q:
@@ -905,6 +947,7 @@ def vendor_item_list(request):
 
     items = Paginator(qs, 10).get_page(request.GET.get("page"))
     return render(request, "my_canteen/vendor/items_list.html", {"items": items, "q": q})
+
 
 @login_required
 def vendor_item_create(request):
@@ -921,6 +964,7 @@ def vendor_item_create(request):
     else:
         form = MenuItemForm()
     return render(request, "my_canteen/vendor/item_form.html", {"form": form, "mode": "create"})
+
 
 @login_required
 def vendor_item_edit(request, pk):
@@ -939,6 +983,7 @@ def vendor_item_edit(request, pk):
         form = MenuItemForm(instance=item)
     return render(request, "my_canteen/vendor/item_form.html", {"form": form, "mode": "edit", "item": item})
 
+
 @login_required
 def vendor_item_delete(request, pk):
     if not require_roles(request.user, ["vendor", "admin"]):
@@ -951,6 +996,7 @@ def vendor_item_delete(request, pk):
         messages.info(request, f"🗑️ '{item.name}' deleted successfully.")
         return redirect("vendor_item_list")
     return render(request, "my_canteen/vendor/item_confirm_delete.html", {"item": item})
+
 
 @login_required
 def vendor_item_toggle_active(request, pk):
@@ -965,7 +1011,6 @@ def vendor_item_toggle_active(request, pk):
     return redirect("vendor_item_list")
 
 
-
 # ---------- Favorites ----------
 @login_required
 def toggle_favorite(request, item_id):
@@ -973,7 +1018,7 @@ def toggle_favorite(request, item_id):
 
     fav, created = Favorite.objects.get_or_create(user=request.user, item=item)
 
-    if not created:  
+    if not created:
         fav.delete()
         messages.info(request, f"Removed from favorites.")
     else:

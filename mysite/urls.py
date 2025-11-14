@@ -41,6 +41,9 @@ urlpatterns = [
     # Orders
     path('orders/', views.orders_page, name='orders'),
 
+    # ✅ NEW: Invoice download (PDF)
+    path('orders/<int:order_id>/invoice/', views.invoice_pdf, name='invoice_pdf'),
+
     # Order lifecycle
     path('orders/<int:order_id>/accept/', views.order_accept, name='order_accept'),
     path('orders/<int:order_id>/preparing/', views.order_preparing, name='order_preparing'),
@@ -97,8 +100,7 @@ urlpatterns = [
     # ===== Favorites / Wishlist =====
     path('favorites/', views.favorites_page, name='favorites'),
     path('favorite/<int:item_id>/toggle/', views.toggle_favorite, name='toggle_favorite'),
-
-
 ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
