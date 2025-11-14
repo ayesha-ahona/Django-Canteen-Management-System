@@ -16,6 +16,8 @@ from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
 
 # ✅ Email verification imports
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
