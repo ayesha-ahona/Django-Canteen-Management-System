@@ -1526,3 +1526,9 @@ def notification_mark_read(request, pk):
         return redirect(notif.link)
 
     return redirect("notifications")
+
+# ---------- ADDRESS BOOK ----------
+@login_required
+def address_list(request):
+    addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
+    return render(request, "my_canteen/address_list.html", {"addresses": addresses})
