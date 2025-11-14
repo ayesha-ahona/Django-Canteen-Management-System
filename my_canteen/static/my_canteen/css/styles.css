@@ -836,12 +836,39 @@ a {
     border-radius: 8px;
 }
 
-.review-form .stars-input select {
-    font-size: 16px;
-    border: 1px solid #ccc;
-    padding: 8px;
-    border-radius: 6px;
-    background: #fff;
+/* 🔁 আগের select স্টাইলের জায়গায় এখন শুধু container margin */
+.review-form .stars-input {
+    margin-bottom: 6px;
+}
+
+/* ⭐ Custom rating stars */
+.rating-stars {
+    display: inline-flex;
+    flex-direction: row-reverse;
+    gap: 4px;
+    font-size: 26px;
+}
+
+.rating-stars input {
+    display: none;
+}
+
+.rating-stars label {
+    cursor: pointer;
+    color: #ddd;
+    transition: transform 0.1s ease, color 0.1s ease;
+}
+
+/* hover effect */
+.rating-stars label:hover,
+.rating-stars label:hover ~ label {
+    color: #ffc107;
+    transform: scale(1.05);
+}
+
+/* checked state */
+.rating-stars input:checked ~ label {
+    color: #ffc107;
 }
 
 .review-form .textarea textarea {

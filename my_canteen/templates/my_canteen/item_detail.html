@@ -101,7 +101,7 @@
             {% endfor %}
           </span>
 
-          <!-- ⭐ Date Only (Time Removed) -->
+          <!-- Date only -->
           <span class="review-date">
             {{ r.created_at|date:"M d, Y" }}
           </span>
@@ -122,12 +122,19 @@
       <hr class="divider">
       <form method="post" action="{% url 'submit_review' item.id %}" class="review-form card">
         {% csrf_token %}
-        <div class="stars-input">
-          {{ form.rating }}
+
+        <!-- ⭐ Custom Star Rating Input -->
+        <div class="stars-input rating-stars">
+          {% for i in "54321" %}
+            <input type="radio" id="star{{ i }}" name="rating" value="{{ i }}">
+            <label for="star{{ i }}" title="{{ i }} star{% if i != '1' %}s{% endif %}">★</label>
+          {% endfor %}
         </div>
+
         <div class="textarea">
           {{ form.comment }}
         </div>
+
         <button class="btn btn-primary" type="submit">
           Submit Review
         </button>
