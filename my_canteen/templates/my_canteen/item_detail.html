@@ -101,8 +101,9 @@
             {% endfor %}
           </span>
 
+          <!-- ⭐ Date Only (Time Removed) -->
           <span class="review-date">
-            {{ r.created_at|date:"M d, Y h:i A" }}
+            {{ r.created_at|date:"M d, Y" }}
           </span>
         </div>
 
