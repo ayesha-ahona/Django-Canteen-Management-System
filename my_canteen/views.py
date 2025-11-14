@@ -493,6 +493,7 @@ def view_cart(request):
 
 
 # ---------- Checkout + Payment ----------
+# ---------- Checkout + Payment ----------
 @login_required
 def checkout(request):
     cart = request.session.get("cart", {})
@@ -500,7 +501,7 @@ def checkout(request):
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
 
-    # --- Build cart items list ---
+    # --- Build cart items list + subtotal ---
     cart_items = []
     total = 0
     for item_id, qty in cart.items():
@@ -509,19 +510,51 @@ def checkout(request):
         cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
         total += subtotal
 
-    # --- Coupon code logic ---
-    coupon_code = request.POST.get("coupon_code", "").strip().upper()
-    discount_percent = COUPON_CODES.get(coupon_code, 0)
-    discount_amount = (total * discount_percent / 100) if discount_percent else 0
-    grand_total = total - discount_amount
+    # default values
+    coupon_code = ""
+    discount_amount = 0
+    grand_total = total
 
-    # --- Payment method form ---
     if request.method == "POST":
         form = CheckoutPaymentForm(request.POST)
+
+        # ---------- COUPON ----------
+        coupon_code = request.POST.get("coupon_code", "").strip().upper()
+        discount_percent = COUPON_CODES.get(coupon_code, 0)
+        if discount_percent:
+            discount_amount = total * discount_percent / 100
+            grand_total = total - discount_amount
+        else:
+            grand_total = total
+
+        # শুধু coupon apply করা হচ্ছে? (Apply button e name="apply_coupon")
+        if "apply_coupon" in request.POST:
+            if coupon_code and not discount_percent:
+                messages.error(request, "Invalid or expired coupon code.")
+            elif discount_percent:
+                messages.success(
+                    request,
+                    f"Coupon {coupon_code} applied ({discount_percent}% off)."
+                )
+            # order create না করে শুধু page re-render
+            return render(
+                request,
+                "my_canteen/checkout.html",
+                {
+                    "items": cart_items,
+                    "total": total,
+                    "form": form,
+                    "coupon_code": coupon_code,
+                    "discount_amount": discount_amount,
+                    "grand_total": grand_total,
+                },
+            )
+
+        # ---------- PLACE ORDER & PAY ----------
         if form.is_valid():
             method = form.cleaned_data["payment_method"]
 
-            # Create order
+            # Order create
             order = Order.objects.create(
                 user=request.user,
                 total_price=grand_total,
@@ -531,16 +564,19 @@ def checkout(request):
                 payment_method=method,
             )
 
-            # Add order items + stock reduce
+            # Order items + stock কমানো
             for item_id, qty in cart.items():
                 item = get_object_or_404(MenuItem, id=item_id)
                 item.stock -= qty
                 item.save()
                 OrderItem.objects.create(
-                    order=order, item=item, quantity=qty, unit_price=item.price
+                    order=order,
+                    item=item,
+                    quantity=qty,
+                    unit_price=item.price,
                 )
 
-            # Payment process
+            # Payment row
             payment = Payment.objects.create(
                 order=order,
                 method=method,
@@ -548,28 +584,41 @@ def checkout(request):
                 status="pending",
             )
 
-            if method == "cash":
+            # সবগুলোই demo: cash, mock_card, bkash, nagad
+            if method in ["cash", "mock_card", "bkash", "nagad"]:
                 payment.status = "paid"
+                payment.paid_at = timezone.now()
+                payment.transaction_id = (
+                    f"{method.upper()}-{order.id}-{int(timezone.now().timestamp())}"
+                )
                 payment.save()
+
                 order.payment_status = "paid"
                 order.save()
+
+                # cart clear
                 request.session["cart"] = {}
-                messages.success(request, "Order placed successfully!")
+
+                # আলাদা আলাদা message
+                msg_map = {
+                    "cash": "Cash payment order placed successfully!",
+                    "mock_card": "Mock Card payment successful!",
+                    "bkash": "bKash payment recorded (demo).",
+                    "nagad": "Nagad payment recorded (demo).",
+                }
+                messages.success(request, msg_map.get(method, "Order placed successfully!"))
                 return redirect("payment_success")
 
-            elif method == "mock_card":
-                payment.status = "paid"
-                payment.save()
-                order.payment_status = "paid"
-                order.save()
-                request.session["cart"] = {}
-                messages.success(request, "Mock Card Payment successful!")
-                return redirect("payment_success")
+            # future: stripe / sslcommerz থাকলে এখানে handle করো
+            messages.info(request, "Selected gateway is not ready yet.")
+            return redirect("payment_failed")
 
     else:
+        # GET request
         form = CheckoutPaymentForm()
+        grand_total = total  # no coupon yet
 
-    # --- Render page ---
+    # --- Render page (default / GET / invalid form) ---
     return render(
         request,
         "my_canteen/checkout.html",
@@ -997,18 +1046,18 @@ def favorites_page(request):
 
 
 # ---------- PDF Invoice Generation ----------
+# ---------- PDF Invoice Generation ----------
 @login_required
 def order_invoice_pdf(request, order_id):
-    # অর্ডারটা বের করি, যাতে অন্য ইউজারের অর্ডার ডাউনলোড না করতে পারে
+    # নিজের order ছাড়া আর কেউ download করতে পারবে না
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    # ----- PDF buffer & canvas -----
     buffer = io.BytesIO()
     c = canvas.Canvas(buffer, pagesize=A4)
     width, height = A4
     margin = 20 * mm
 
-    # ================= HEADER BAND =================
+    # ========== HEADER BAND ==========
     header_h = 25 * mm
     c.setFillColor(colors.HexColor("#c62828"))
     c.rect(0, height - header_h, width, header_h, fill=1, stroke=0)
@@ -1020,11 +1069,11 @@ def order_invoice_pdf(request, order_id):
     c.setFont("Helvetica", 11)
     c.drawString(margin, height - header_h + 4 * mm, "Order Invoice")
 
-    # ================= ORDER & CUSTOMER INFO =================
-    y_left = height - header_h - 15 * mm
+    # ========== ORDER + CUSTOMER INFO ==========
     c.setFillColor(colors.black)
 
-    # Left side: order info
+    # Left: order info
+    y_left = height - header_h - 15 * mm
     c.setFont("Helvetica-Bold", 12)
     c.drawString(margin, y_left, "Order Details")
 
@@ -1034,7 +1083,7 @@ def order_invoice_pdf(request, order_id):
     y_left -= 14
     c.drawString(margin, y_left, f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}")
 
-    # Right side: customer info
+    # Right: customer info
     info_x = width / 2
     y_right = height - header_h - 15 * mm
 
@@ -1049,13 +1098,13 @@ def order_invoice_pdf(request, order_id):
     y_right -= 14
     c.drawString(info_x, y_right, f"Status: {order.status.title()}")
 
-    # ================= SEPARATOR =================
+    # Separator line
     y = min(y_left, y_right) - 22
     c.setStrokeColor(colors.lightgrey)
     c.setLineWidth(0.8)
     c.line(margin, y, width - margin, y)
 
-    # ================= ITEMS TABLE =================
+    # ========== ITEMS TABLE ==========
     y -= 20
     c.setFont("Helvetica-Bold", 12)
     c.setFillColor(colors.black)
@@ -1068,11 +1117,10 @@ def order_invoice_pdf(request, order_id):
     col_price = margin + 97 * mm
     col_subtotal = margin + 127 * mm
 
-    # Table header background
+    # table header background
     c.setFillColor(colors.whitesmoke)
     c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
 
-    # Header texts
     c.setFillColor(colors.black)
     c.setFont("Helvetica-Bold", 11)
     c.drawString(col_name + 4, y + 4, "Item")
@@ -1080,25 +1128,40 @@ def order_invoice_pdf(request, order_id):
     c.drawString(col_price + 4, y + 4, "Price")
     c.drawString(col_subtotal + 4, y + 4, "Subtotal")
 
-    # Rows
     y -= row_h
     c.setFont("Helvetica", 10)
 
     for oi in order.orderitem_set.all():
-        # নতুন পেজ লাগলে
-        if y < 80 * mm:
-            c.showPage()
-            c = canvas.Canvas(buffer, pagesize=A4)
+        # নতুন পেজ দরকার হলে
+        if y < 40 * mm:
+            c.showPage()               # শুধু নতুন পেজ, canvas নতুন তৈরি না
             width, height = A4
             margin = 20 * mm
             y = height - margin
 
+            # নতুন পেজে ছোট শিরোনাম
+            c.setFont("Helvetica-Bold", 12)
+            c.drawString(margin, y, "Items (contd.)")
+            y -= 18
+
+            # আবার header row আঁকি
+            c.setFillColor(colors.whitesmoke)
+            c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
+            c.setFillColor(colors.black)
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(col_name + 4, y + 4, "Item")
+            c.drawString(col_qty + 4, y + 4, "Qty")
+            c.drawString(col_price + 4, y + 4, "Price")
+            c.drawString(col_subtotal + 4, y + 4, "Subtotal")
+            y -= row_h
+            c.setFont("Helvetica", 10)
+
+        # data row
         c.setFillColor(colors.white)
         c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
         c.setFillColor(colors.black)
 
-        # কলাম অনুযায়ী ডাটা
-        c.drawString(col_name + 4, y + 4, oi.item.name[:30])
+        c.drawString(col_name + 4, y + 4, oi.item.name[:35])
         c.drawString(col_qty + 4, y + 4, str(oi.quantity))
         c.drawRightString(col_price + 35, y + 4, f"{oi.item.price:.2f} Tk")
 
@@ -1107,8 +1170,8 @@ def order_invoice_pdf(request, order_id):
 
         y -= row_h
 
-    # ================= TOTAL BOX =================
-    y -= 22
+    # ========== TOTAL BOX ==========
+    y -= 25
     c.setStrokeColor(colors.HexColor("#c62828"))
     c.setLineWidth(1.2)
     c.rect(col_price - 10, y - 6, (width - margin) - (col_price - 10), 24,
@@ -1119,7 +1182,7 @@ def order_invoice_pdf(request, order_id):
     c.drawString(col_price, y + 2, "Total:")
     c.drawRightString(width - margin - 6, y + 2, f"{order.total_price:.2f} Tk")
 
-    # ================= FOOTER =================
+    # ========== FOOTER ==========
     footer_y = 25 * mm
     c.setStrokeColor(colors.lightgrey)
     c.setLineWidth(0.6)
@@ -1130,11 +1193,10 @@ def order_invoice_pdf(request, order_id):
     c.drawString(margin, footer_y, "Thank you for ordering from UAP CanteenX ❤")
     c.drawRightString(width - margin, footer_y, "This is a system generated invoice.")
 
-    # Finish
     c.save()
     buffer.seek(0)
 
     filename = f"order_{order.id}_invoice.pdf"
     response = HttpResponse(buffer, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
+    response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response

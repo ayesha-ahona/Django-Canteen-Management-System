@@ -1516,6 +1516,58 @@ a {
     }
 }
 
+.checkout-section {
+    background: #fff;
+    border-radius: 12px;
+    padding: 16px 18px;
+    margin-top: 16px;
+    border: 1px solid #eee;
+}
+
+.section-title {
+    margin: 0 0 10px;
+    font-size: 16px;
+    font-weight: 700;
+    color: #333;
+}
+
+.payment-method-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.pay-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+    background: #fafafa;
+    cursor: pointer;
+    transition: 0.2s;
+}
+
+.pay-option input[type="radio"] {
+    transform: scale(1.1);
+}
+
+.pay-option:hover {
+    border-color: #d32f2f;
+    background: #fff5f5;
+}
+
+.pay-option.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: #f5f5f5;
+}
+
+.pay-option.disabled:hover {
+    border-color: #e0e0e0;
+    background: #f5f5f5;
+}
 
 /* ছোট স্ক্রিনে single column */
 @media (max-width: 900px) {
