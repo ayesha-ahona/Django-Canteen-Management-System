@@ -119,7 +119,7 @@ def signup_page(request):
             role = form.cleaned_data.get("role", "guest")
             phone = form.cleaned_data.get("phone")
 
-            # প্রথম ইউজারকে admin
+        
             if User.objects.count() == 1:
                 role = "admin"
 
@@ -178,7 +178,7 @@ def resend_verification(request):
 
 # ---------- Helpers ----------
 def get_role(user):
-    """UserProfile না থাকলে guest রিটার্ন করবে"""
+    """If UserProfile does not exist, it will return 'guest'."""
     try:
         return user.userprofile.role
     except UserProfile.DoesNotExist:
@@ -187,10 +187,10 @@ def get_role(user):
 
 def get_effective_role(real_role: str) -> str:
     """
-    UI/হেডিং-এ real_role দেখাবো, কিন্তু ক্ষমতা/ডেটা effective_role দিয়ে।
-    - admin -> vendor ক্ষমতা
-    - vendor -> admin ক্ষমতা
-    - অন্যরা (student/faculty/staff/guest) -> আগের মতই
+    In the UI/heading, we will show the real_role, but for permissions/data, we use effective_role.
+    - admin -> vendor permissions
+    - vendor -> admin permissions
+    - others (student/faculty/staff/guest) -> as before
     """
     if real_role == "admin":
         return "vendor"
@@ -200,15 +200,13 @@ def get_effective_role(real_role: str) -> str:
 
 
 def require_roles(user, allowed):
-    """সহজ পারমিশন চেক"""
+    """easy permission check"""
     return get_role(user) in allowed
 
 
 def can_user_cancel(order, user) -> bool:
-    """
-    End-user smart cancel:
-    student/faculty/guest নিজের অর্ডার preparing-এর আগ পর্যন্ত (pending/accepted) ক্যানসেল করতে পারবে।
-    """
+    "End-user smart cancel: Students, faculty, and guests can cancel their orders until preparation begins."
+
     role = get_role(user)
     if role not in {"student", "faculty", "guest"}:
         return False

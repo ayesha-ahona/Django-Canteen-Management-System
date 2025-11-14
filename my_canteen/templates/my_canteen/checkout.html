@@ -5,7 +5,6 @@
 
   <h2 class="checkout-title">Checkout</h2>
 
-  <!-- দুই কলামের লে–আউট -->
   <div class="checkout-grid">
 
     <!-- ========== LEFT : Order Items ========== -->
@@ -44,30 +43,46 @@
       <form method="post" class="checkout-form">
         {% csrf_token %}
 
-        <!-- ⭐ DELIVERY ADDRESS SECTION -->
-        <div class="address-box">
-          <h4>Delivery Address</h4>
+        <!-- ⭐ DELIVERY ADDRESS -->
+        <section class="address-box">
+          <div class="address-header">
+            <div>
+              <h4>Delivery Address</h4>
+              <p>Choose a saved address, or use a one-time address for this order.</p>
+            </div>
+          </div>
 
           {% if addresses %}
             <div class="address-list">
               {% for addr in addresses %}
-                <label class="address-item">
-                  <input type="radio"
-                         name="address_id"
-                         value="{{ addr.id }}"
-                         {% if selected_address_id %}
-                           {% if addr.id|stringformat:"s" == selected_address_id|stringformat:"s" %}checked{% endif %}
-                         {% else %}
-                           {% if addr.is_default %}checked{% endif %}
-                         {% endif %}
+                <label class="address-card">
+                  <input
+                    type="radio"
+                    name="address_id"
+                    value="{{ addr.id }}"
+                    class="address-radio"
+                    {% if selected_address_id %}
+                      {% if addr.id|stringformat:"s" == selected_address_id|stringformat:"s" %}checked{% endif %}
+                    {% else %}
+                      {% if addr.is_default %}checked{% endif %}
+                    {% endif %}
                   >
-                  <div class="address-text">
-                    <strong>{{ addr.label }}</strong><br>
-                    {{ addr.line1 }}
-                    {% if addr.line2 %}, {{ addr.line2 }}{% endif %},
-                    {{ addr.city }}
+                  <div class="address-body">
+                    <div class="address-title-row">
+                      <span class="address-label">{{ addr.label }}</span>
+                      {% if addr.is_default %}
+                        <span class="address-pill">Default</span>
+                      {% endif %}
+                    </div>
+                    <div class="address-lines">
+                      {{ addr.line1 }}
+                      {% if addr.line2 %}, {{ addr.line2 }}{% endif %},
+                      {{ addr.city }}
+                    </div>
                     {% if addr.phone %}
-                      <br><span class="muted">📞 {{ addr.phone }}</span>
+                      <div class="address-meta">
+                        📞 {{ addr.phone }}
+                      </div>
                     {% endif %}
                   </div>
                 </label>
@@ -75,39 +90,48 @@
             </div>
           {% endif %}
 
-          <!-- One-time address option -->
-          <label class="address-item">
-            <input type="radio"
-                   name="address_id"
-                   value=""
-                   {% if not selected_address_id %}checked{% endif %}>
-            <div class="address-text">
-              <strong>Use one-time address</strong>
-              <br><span class="muted">Write a new address below just for this order.</span>
+          <!-- One-time address -->
+          <label class="address-card address-card--ghost">
+            <input
+              type="radio"
+              name="address_id"
+              value=""
+              class="address-radio"
+              {% if not selected_address_id %}checked{% endif %}
+            >
+            <div class="address-body">
+              <div class="address-title-row">
+                <span class="address-label">Use one-time address</span>
+              </div>
+              <p class="address-helper">
+                This address will be used only for this order.
+              </p>
+
+              <label class="address-text-label" for="id_address_text">
+                Address details
+              </label>
+              <textarea
+                id="id_address_text"
+                name="address_text"
+                rows="3"
+                class="address-textarea"
+                placeholder="House, road, area, floor / room, landmark..."
+              >{{ address_text|default_if_none:"" }}</textarea>
+              <small class="address-example">
+                Example: UAP Campus, Civil Building, Level 4, CSE Lab Front Desk.
+              </small>
             </div>
           </label>
-
-          <!-- Actual address textarea -->
-          <div class="address-input-box">
-            <label for="id_address_text">Address details</label>
-            <textarea id="id_address_text"
-                      name="address_text"
-                      rows="2"
-                      placeholder="House, road, area, floor / room, landmark...">{{ address_text|default_if_none:"" }}</textarea>
-            <small class="muted">
-              Example: UAP Campus, Civil Building, Level 4, CSE Lab Front Desk.
-            </small>
-          </div>
 
           <div class="address-manage-link">
             <a href="{% url 'address_book' %}" class="btn btn-soft">
               Manage saved addresses
             </a>
           </div>
-        </div>
+        </section>
 
-        <!-- Order summary -->
-        <div class="summary-box">
+        <!-- 💰 Order summary -->
+        <section class="summary-box">
           <h4>Order Summary</h4>
 
           <div class="summary-row">
@@ -128,15 +152,15 @@
 
           <hr class="divider">
 
-          <div class="summary-row" style="font-weight:700;">
+          <div class="summary-row summary-row-total">
             <span>Payable Total</span>
             <span>{{ grand_total }} Tk</span>
           </div>
-        </div>
+        </section>
 
-        <!-- Coupon / Promo -->
-        <div class="coupon-box">
-          <label for="id_coupon_code">Coupon / Promo Code</label>
+        <!-- 🎟 Coupon / Promo -->
+        <section class="coupon-box">
+          <h4>Coupon / Promo Code</h4>
           <div class="coupon-input">
             <input type="text"
                    id="id_coupon_code"
@@ -148,18 +172,16 @@
             </button>
           </div>
           <small class="muted">
-            Try codes:
-            <strong>FOOD10</strong>, <strong>WELCOME20</strong>, <strong>STUDENT5</strong>,
+            Try: <strong>FOOD10</strong>, <strong>WELCOME20</strong>, <strong>STUDENT5</strong>,
             <strong>FESTIVE15</strong>, <strong>VIP25</strong>, <strong>HAPPY30</strong>,
             <strong>SAVE30</strong>, <strong>MEAL40</strong>, <strong>BUDGET35</strong>,
             <strong>SNACK15</strong>, <strong>LUNCH20</strong>
           </small>
-        </div>
+        </section>
 
-        <!-- Payment method -->
-        <div class="payment-box">
+        <!-- 💳 Payment method -->
+        <section class="payment-box">
           <h4>Payment Method</h4>
-
           <div class="payment-options">
             {{ form.payment_method }}
           </div>
@@ -176,7 +198,7 @@
             </div>
             <small class="muted">Demo only — no real charge.</small>
           </div>
-        </div>
+        </section>
 
         <button type="submit" class="pay-now-btn">
           Place Order &amp; Pay
