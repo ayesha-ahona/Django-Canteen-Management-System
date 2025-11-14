@@ -103,6 +103,12 @@ urlpatterns = [
     # ===== Notifications =====
     path("notifications/", views.notifications_page, name="notifications"),
     path("notifications/read/<int:pk>/", views.notification_mark_read, name="notification_mark_read"),
+
+    # ===== Address Book =====
+    path("addresses/", views.address_book, name="address_book"),
+    path("addresses/<int:pk>/delete/", views.address_delete, name="address_delete"),
+    path("addresses/<int:pk>/default/", views.address_set_default, name="address_set_default"),
+#
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

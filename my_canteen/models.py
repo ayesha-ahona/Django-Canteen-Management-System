@@ -231,3 +231,42 @@ class Notification(models.Model):
 
     def _str_(self):
         return f"{self.user.username} – {self.title}"
+    
+# ---------------------------
+# Address
+# ---------------------------
+    
+class Address(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="addresses"
+    )
+    label = models.CharField(
+        max_length=50,
+        blank=True,
+        help_text="e.g. Home, Office, Hostel"
+    )
+    line1 = models.CharField(max_length=120, verbose_name="Address line 1")
+    line2 = models.CharField(
+        max_length=120,
+        blank=True,
+        verbose_name="Address line 2"
+    )
+    city = models.CharField(max_length=50, default="Dhaka")
+    phone = models.CharField(max_length=20, blank=True)
+    is_default = models.BooleanField(default=False)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # যদি এটাকে default করা হয়, অন্য সব address থেকে default তুলে নাও
+        if self.is_default:
+            Address.objects.filter(user=self.user).exclude(pk=self.pk).update(
+                is_default=False
+            )
+
+    def _str_(self):
+        title = self.label or "Address"
+        return f"{title} - {self.line1[:25]}"
