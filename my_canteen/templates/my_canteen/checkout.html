@@ -86,7 +86,8 @@
             </button>
           </div>
           <small class="muted">
-            Try codes: <strong>FOOD10</strong>, <strong>WELCOME20</strong>, <strong>STUDENT5</strong>,
+            Try codes:
+            <strong>FOOD10</strong>, <strong>WELCOME20</strong>, <strong>STUDENT5</strong>,
             <strong>FESTIVE15</strong>, <strong>VIP25</strong>, <strong>HAPPY30</strong>,
             <strong>SAVE30</strong>, <strong>MEAL40</strong>, <strong>BUDGET35</strong>,
             <strong>SNACK15</strong>, <strong>LUNCH20</strong>
@@ -118,7 +119,6 @@
         <button type="submit" class="pay-now-btn">
           Place Order &amp; Pay
         </button>
-
       </form>
 
       <div class="checkout-back-link">
@@ -135,11 +135,17 @@
   const mockFields = document.getElementById('mock-card-fields');
 
   function toggleFields() {
-    const v = document.querySelector('input[name="payment_method"]:checked')?.value;
-    if (!mockFields) return;
-    mockFields.style.display = (v === 'mock_card') ? 'block' : 'none';
+    const checked = document.querySelector('input[name="payment_method"]:checked');
+    if (!mockFields || !checked) return;
+    // শুধু mock card সিলেক্ট থাকলে card ফিল্ড দেখাবে
+    mockFields.style.display = (checked.value === 'mock_card') ? 'block' : 'none';
   }
-  radios.forEach(r => r.addEventListener('change', toggleFields));
+
+  radios.forEach(function (r) {
+    r.addEventListener('change', toggleFields);
+  });
+
+  // প্রথম লোডেও একবার চালাই
   toggleFields();
 })();
 </script>

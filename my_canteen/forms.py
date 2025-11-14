@@ -2,8 +2,8 @@ from django import forms
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
-from .models import Review, Payment, MenuItem
 
+from .models import Review, MenuItem
 
 
 # ------------------------------------------------
@@ -14,11 +14,11 @@ class CustomSignupForm(UserCreationForm):
     phone = forms.CharField(max_length=15, required=False, label="Phone")
 
     ROLE_CHOICES = [
-        ('student', 'Student'),
-        ('faculty', 'Faculty'),
-        ('staff', 'Staff'),
-        ('guest', 'Visitor / Guest'),
-        ('vendor', 'Vendor / Supplier'),
+        ("student", "Student"),
+        ("faculty", "Faculty"),
+        ("staff", "Staff"),
+        ("guest", "Visitor / Guest"),
+        ("vendor", "Vendor / Supplier"),
     ]
     role = forms.ChoiceField(choices=ROLE_CHOICES, required=True, label="Role")
 
@@ -26,8 +26,8 @@ class CustomSignupForm(UserCreationForm):
         model = User
         fields = ["username", "email", "phone", "role", "password1", "password2"]
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def _init_(self, *args, **kwargs):
+        super()._init_(*args, **kwargs)
         placeholders = {
             "username": "Choose a username",
             "email": "you@example.com",
@@ -66,6 +66,7 @@ class ReviewForm(forms.ModelForm):
     """
     User feedback form — allows a logged-in user to rate and review a MenuItem.
     """
+
     class Meta:
         model = Review
         fields = ["rating", "comment"]
@@ -83,10 +84,10 @@ class ReviewForm(forms.ModelForm):
             ),
         }
 
-    def __init__(self, *args, **kwargs):
+    def _init_(self, *args, **kwargs):
         self.user = kwargs.pop("user", None)
         self.item = kwargs.pop("item", None)
-        super().__init__(*args, **kwargs)
+        super()._init_(*args, **kwargs)
 
     def clean_rating(self):
         rating = int(self.cleaned_data.get("rating"))
@@ -100,7 +101,6 @@ class ReviewForm(forms.ModelForm):
         """
         cleaned_data = super().clean()
         if self.user and self.item:
-            from .models import Review
             if Review.objects.filter(user=self.user, item=self.item).exists():
                 raise ValidationError("You have already reviewed this item.")
         return cleaned_data
@@ -123,57 +123,75 @@ class ReviewForm(forms.ModelForm):
 # 💳 Checkout Payment Form
 # ------------------------------------------------
 class CheckoutPaymentForm(forms.Form):
-    """
-    Form used during checkout to select a payment method.
-    """
+    PAYMENT_CHOICES = [
+        ("cash", "Cash"),
+        ("mock_card", "Card (Demo)"),
+        ("bkash", "bKash (Demo)"),
+        ("nagad", "Nagad (Demo)"),
+    ]
+
     payment_method = forms.ChoiceField(
-        choices=Payment.METHOD_CHOICES,
+        choices=PAYMENT_CHOICES,
         widget=forms.RadioSelect,
-        label="Select Payment Method",
     )
+
+    # Mock card fields (demo)
     card_number = forms.CharField(
         required=False,
-        max_length=16,
-        label="Mock Card Number",
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "1234 5678 9012 3456"})
+        label="Card Number",
+        widget=forms.TextInput(attrs={"placeholder": "1111 2222 3333 4444"}),
     )
     card_cvc = forms.CharField(
         required=False,
-        max_length=4,
         label="CVC",
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "123"})
+        widget=forms.TextInput(attrs={"placeholder": "123"}),
     )
 
     def clean(self):
-        cleaned_data = super().clean()
-        method = cleaned_data.get("payment_method")
-        card_number = cleaned_data.get("card_number", "").strip()
-        cvc = cleaned_data.get("card_cvc", "").strip()
+        cleaned = super().clean()
+        method = cleaned.get("payment_method")
+        card_number = cleaned.get("card_number")
+        card_cvc = cleaned.get("card_cvc")
 
-        # Validation for mock card payments only
+        # যদি mock_card সিলেক্ট করে, তখনই card info চেক করব
         if method == "mock_card":
-            if not card_number or not cvc:
-                raise ValidationError("Card number and CVC are required for card payments.")
-            if not card_number.isdigit() or len(card_number) != 16:
-                raise ValidationError("Card number must be 16 digits.")
-            if not cvc.isdigit() or not (3 <= len(cvc) <= 4):
-                raise ValidationError("CVC must be 3 or 4 digits.")
-        return cleaned_data
+            if not card_number or not card_cvc:
+                raise ValidationError(
+                    "For demo card payment, please enter any card number and CVC."
+                )
+        return cleaned
 
 
 # ------------------------------------------------
-# 🍽️ Menu Item Management Form (Admin/Vendor Side)
-# -----------------------------------------------
+# 🍽 Menu Item Management Form (Admin/Vendor Side)
+# ------------------------------------------------
 class MenuItemForm(forms.ModelForm):
     class Meta:
         model = MenuItem
-        fields = ["name","category","price","stock","image","description","is_active","is_popular"]
+        fields = [
+            "name",
+            "category",
+            "price",
+            "stock",
+            "image",
+            "description",
+            "is_active",
+            "is_popular",
+        ]
         widgets = {
-            "name": forms.TextInput(attrs={"class":"form-control","placeholder":"Item name"}),
-            "category": forms.Select(attrs={"class":"form-control"}),
-            "price": forms.NumberInput(attrs={"class":"form-control","step":"0.01"}),
-            "stock": forms.NumberInput(attrs={"class":"form-control","min":0}),
-            "description": forms.Textarea(attrs={"class":"form-control","rows":3}),
-            "is_active": forms.CheckboxInput(attrs={"class":"form-check-input"}),
-            "is_popular": forms.CheckboxInput(attrs={"class":"form-check-input"}),
+            "name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Item name"}
+            ),
+            "category": forms.Select(attrs={"class": "form-control"}),
+            "price": forms.NumberInput(
+                attrs={"class": "form-control", "step": "0.01"}
+            ),
+            "stock": forms.NumberInput(
+                attrs={"class": "form-control", "min": 0}
+            ),
+            "description": forms.Textarea(
+                attrs={"class": "form-control", "rows": 3}
+            ),
+            "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_popular": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
