@@ -47,8 +47,9 @@ from .models import (
     Payment,
     Favorite,
     Notification,
+    Address
 )
-from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm, MenuItemForm
+from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm, MenuItemForm, AddressForm
 
 # ---------- COUPON / PROMO CODES (simple fixed list) ----------
 COUPON_CODES = {
@@ -569,6 +570,11 @@ def checkout(request):
         cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
         total += subtotal
 
+    # ✅ এই লাইন নতুন: user er saved address gulo
+    user_addresses = Address.objects.filter(user=request.user).order_by(
+        "-is_default", "-created_at"
+    )
+
     # default values
     coupon_code = ""
     discount_amount = 0
@@ -586,16 +592,15 @@ def checkout(request):
         else:
             grand_total = total
 
-        # শুধু coupon apply করা হচ্ছে? (Apply button e name="apply_coupon")
+        # শুধু coupon apply করলে (Apply button)
         if "apply_coupon" in request.POST:
             if coupon_code and not discount_percent:
                 messages.error(request, "Invalid or expired coupon code.")
             elif discount_percent:
                 messages.success(
                     request,
-                    f"Coupon {coupon_code} applied ({discount_percent}% off).",
+                    f"Coupon {coupon_code} applied ({discount_percent}% off)."
                 )
-            # order create না করে শুধু page re-render
             return render(
                 request,
                 "my_canteen/checkout.html",
@@ -606,6 +611,7 @@ def checkout(request):
                     "coupon_code": coupon_code,
                     "discount_amount": discount_amount,
                     "grand_total": grand_total,
+                    "addresses": user_addresses,   # ✅ এখানে পাঠাচ্ছি
                 },
             )
 
@@ -613,11 +619,26 @@ def checkout(request):
         if form.is_valid():
             method = form.cleaned_data["payment_method"]
 
+            # ✅ ফর্ম থেকে নির্বাচিত address বের করছি
+            addr_text = "Default Address"
+            addr_id = request.POST.get("address_id")
+            if addr_id:
+                try:
+                    addr = user_addresses.get(id=addr_id)
+                    parts = [addr.line1]
+                    if addr.line2:
+                        parts.append(addr.line2)
+                    if addr.city:
+                        parts.append(addr.city)
+                    addr_text = ", ".join(parts)
+                except Address.DoesNotExist:
+                    pass
+
             # Order create
             order = Order.objects.create(
                 user=request.user,
                 total_price=grand_total,
-                address="Default Address",
+                address=addr_text,      # ✅ এখানে save হচ্ছে
                 status="pending",
                 payment_status="unpaid",
                 payment_method=method,
@@ -629,7 +650,10 @@ def checkout(request):
                 item.stock -= qty
                 item.save()
                 OrderItem.objects.create(
-                    order=order, item=item, quantity=qty, unit_price=item.price
+                    order=order,
+                    item=item,
+                    quantity=qty,
+                    unit_price=item.price,
                 )
 
             # Payment row
@@ -640,7 +664,7 @@ def checkout(request):
                 status="pending",
             )
 
-            # সবগুলোই demo: cash, mock_card, bkash, nagad
+            # সবগুলো demo: cash, mock_card, bkash, nagad
             if method in ["cash", "mock_card", "bkash", "nagad"]:
                 payment.status = "paid"
                 payment.paid_at = timezone.now()
@@ -652,28 +676,17 @@ def checkout(request):
                 order.payment_status = "paid"
                 order.save()
 
-                # cart clear
                 request.session["cart"] = {}
 
-                # Notification: order placed & paid
                 msg_map = {
-                    "cash": "Your cash payment order has been placed successfully!",
+                    "cash": "Cash payment order placed successfully!",
                     "mock_card": "Mock Card payment successful!",
                     "bkash": "bKash payment recorded (demo).",
                     "nagad": "Nagad payment recorded (demo).",
                 }
-                send_notification(
-                    request.user,
-                    title=f"Order #{order.id} Confirmed",
-                    message=msg_map.get(method, "Your order has been placed."),
-                    link="/orders/",
-                    email=True,
-                )
-
                 messages.success(request, msg_map.get(method, "Order placed successfully!"))
                 return redirect("payment_success")
 
-            # future: stripe / sslcommerz থাকলে এখানে handle করো
             messages.info(request, "Selected gateway is not ready yet.")
             return redirect("payment_failed")
 
@@ -682,7 +695,7 @@ def checkout(request):
         form = CheckoutPaymentForm()
         grand_total = total  # no coupon yet
 
-    # --- Render page (default / GET / invalid form) ---
+    # --- Render page (GET / invalid form) ---
     return render(
         request,
         "my_canteen/checkout.html",
@@ -693,6 +706,7 @@ def checkout(request):
             "coupon_code": coupon_code,
             "discount_amount": discount_amount,
             "grand_total": grand_total,
+            "addresses": user_addresses,   # ✅ এখানেও পাঠাতে হবে
         },
     )
 
@@ -891,6 +905,52 @@ def settings_page(request):
         return redirect("settings")
     return render(request, "my_canteen/settings.html", {"profile": profile})
 
+# ---------- Address Book ----------
+@login_required
+def address_book(request):
+    """
+    User নিজে তাঁর address গুলো manage করবে (list + add new).
+    """
+    addresses = Address.objects.filter(user=request.user).order_by(
+        "-is_default", "-created_at"
+    )
+
+    if request.method == "POST":
+        form = AddressForm(request.POST)
+        if form.is_valid():
+            addr = form.save(commit=False)
+            addr.user = request.user
+            addr.save()
+            messages.success(request, "Address saved successfully.")
+            return redirect("address_book")
+    else:
+        form = AddressForm()
+
+    return render(
+        request,
+        "my_canteen/address_book.html",
+        {"addresses": addresses, "form": form},
+    )
+
+
+@login_required
+def address_delete(request, pk):
+    addr = get_object_or_404(Address, pk=pk, user=request.user)
+    if request.method == "POST":
+        addr.delete()
+        messages.info(request, "Address removed.")
+        return redirect("address_book")
+    return HttpResponseForbidden("Invalid request")
+
+
+@login_required
+def address_set_default(request, pk):
+    addr = get_object_or_404(Address, pk=pk, user=request.user)
+    Address.objects.filter(user=request.user).update(is_default=False)
+    addr.is_default = True
+    addr.save(update_fields=["is_default"])
+    messages.success(request, "Default address updated.")
+    return redirect("address_book")
 
 # ---------- Order lifecycle (vendor & admin) ----------
 @login_required

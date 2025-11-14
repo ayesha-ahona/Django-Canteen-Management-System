@@ -3,7 +3,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 
-from .models import Review, MenuItem
+from .models import Review, MenuItem, Payment, Address
 
 
 # ------------------------------------------------
@@ -42,6 +42,7 @@ class CustomSignupForm(UserCreationForm):
             if name in placeholders:
                 field.widget.attrs["placeholder"] = placeholders[name]
 
+        # default help_text hide
         self.fields["username"].help_text = ""
         self.fields["password1"].help_text = ""
         self.fields["password2"].help_text = ""
@@ -153,7 +154,7 @@ class CheckoutPaymentForm(forms.Form):
         card_number = cleaned.get("card_number")
         card_cvc = cleaned.get("card_cvc")
 
-        # যদি mock_card সিলেক্ট করে, তখনই card info চেক করব
+        # mock_card হলে card info mandatory
         if method == "mock_card":
             if not card_number or not card_cvc:
                 raise ValidationError(
@@ -194,4 +195,39 @@ class MenuItemForm(forms.ModelForm):
             ),
             "is_active": forms.CheckboxInput(attrs={"class": "form-check-input"}),
             "is_popular": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+        }
+
+
+# ------------------------------------------------
+# 📮 Address Book Form
+# ------------------------------------------------
+class AddressForm(forms.ModelForm):
+    class Meta:
+        model = Address
+        fields = ["label", "line1", "line2", "city", "phone", "is_default"]
+        widgets = {
+            "label": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "Home / Office / Hostel"}
+            ),
+            "line1": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "House, road, area"}
+            ),
+            "line2": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Floor / Landmark (optional)",
+                }
+            ),
+            "city": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "City"}
+            ),
+            "phone": forms.TextInput(
+                attrs={
+                    "class": "form-control",
+                    "placeholder": "Contact phone (optional)",
+                }
+            ),
+            "is_default": forms.CheckboxInput(
+                attrs={"class": "form-check-input"}
+            ),
         }

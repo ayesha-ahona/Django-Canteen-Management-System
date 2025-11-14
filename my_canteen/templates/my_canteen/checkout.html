@@ -38,11 +38,36 @@
       </table>
     </div>
 
-    <!-- ========== RIGHT : Summary + Coupon + Payment ========== -->
+    <!-- ========== RIGHT : Address + Summary + Coupon + Payment ========== -->
     <div class="checkout-right">
 
       <form method="post" class="checkout-form">
         {% csrf_token %}
+
+        <!-- ✅ Delivery Address -->
+        <div class="summary-box">
+          <h4>Delivery Address</h4>
+
+          {% if addresses %}
+            <select name="address_id"
+                    style="width:100%;padding:8px;border-radius:8px;border:1px solid #ddd;margin-bottom:6px;">
+              {% for a in addresses %}
+                <option value="{{ a.id }}" {% if a.is_default %}selected{% endif %}>
+                  {{ a.label|default:"Address" }} – {{ a.line1 }}{% if a.city %}, {{ a.city }}{% endif %}
+                </option>
+              {% endfor %}
+            </select>
+            <small class="muted">
+              Want to manage addresses?
+              <a href="{% url 'address_book' %}">Open Address Book</a>
+            </small>
+          {% else %}
+            <p class="muted">
+              No address saved yet.
+              <a href="{% url 'address_book' %}">Add an address</a> and come back.
+            </p>
+          {% endif %}
+        </div>
 
         <!-- Order summary -->
         <div class="summary-box">
@@ -137,7 +162,6 @@
   function toggleFields() {
     const checked = document.querySelector('input[name="payment_method"]:checked');
     if (!mockFields || !checked) return;
-    // শুধু mock card সিলেক্ট থাকলে card ফিল্ড দেখাবে
     mockFields.style.display = (checked.value === 'mock_card') ? 'block' : 'none';
   }
 
@@ -145,7 +169,6 @@
     r.addEventListener('change', toggleFields);
   });
 
-  // প্রথম লোডেও একবার চালাই
   toggleFields();
 })();
 </script>

@@ -1,0 +1,119 @@
+{% extends "my_canteen/base.html" %}
+{% block content %}
+
+<section class="container" style="max-width: 900px;">
+  <div style="display:flex;align-items:center;gap:.6rem;margin:24px 0 12px;">
+    <span style="font-size:22px;">📮</span>
+    <h2 style="margin:0;">My Address Book</h2>
+  </div>
+
+  <p style="color:#666;margin-bottom:18px;">
+    Save multiple delivery addresses and choose one easily during checkout.
+  </p>
+
+  <div style="display:grid;grid-template-columns:2fr 1.3fr;gap:20px;align-items:flex-start;">
+    <!-- Saved addresses list -->
+    <div style="background:#fff;border:1px solid #eee;border-radius:14px;padding:16px;">
+      <h3 style="margin-top:0;margin-bottom:10px;">Saved Addresses</h3>
+
+      {% if addresses %}
+        <table style="width:100%;border-collapse:collapse;font-size:.94rem;">
+          <thead>
+            <tr style="background:#f5f5f5;">
+              <th style="text-align:left;padding:8px;">Label</th>
+              <th style="text-align:left;padding:8px;">Address</th>
+              <th style="text-align:left;padding:8px;">Phone</th>
+              <th style="text-align:left;padding:8px;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in addresses %}
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:8px;">
+                  {{ a.label|default:"(No label)" }}
+                  {% if a.is_default %}
+                    <span style="background:#c62828;color:#fff;border-radius:999px;padding:2px 8px;font-size:.75rem;margin-left:4px;">
+                      Default
+                    </span>
+                  {% endif %}
+                </td>
+                <td style="padding:8px;">
+                  {{ a.line1 }}{% if a.line2 %}, {{ a.line2 }}{% endif %}, {{ a.city }}
+                </td>
+                <td style="padding:8px;">{{ a.phone|default:"-" }}</td>
+                <td style="padding:8px;">
+                  <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                    {% if not a.is_default %}
+                      <a href="{% url 'address_set_default' a.id %}"
+                         class="btn"
+                         style="padding:4px 8px;font-size:.8rem;">
+                        Make Default
+                      </a>
+                    {% endif %}
+                    <form action="{% url 'address_delete' a.id %}" method="post"
+                          onsubmit="return confirm('Delete this address?');">
+                      {% csrf_token %}
+                      <button type="submit"
+                              style="background:#e0e0e0;border:none;padding:4px 8px;border-radius:8px;font-size:.8rem;cursor:pointer;">
+                        Delete
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <p style="margin:10px 0;color:#777;">No address saved yet.</p>
+      {% endif %}
+    </div>
+
+    <!-- Add new address form -->
+    <div style="background:#fff;border:1px solid #eee;border-radius:14px;padding:16px;">
+      <h3 style="margin-top:0;margin-bottom:10px;">Add New Address</h3>
+
+      <form method="post">
+        {% csrf_token %}
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:.92rem;">
+          <div>
+            <label>Label</label><br/>
+            {{ form.label }}
+          </div>
+          <div>
+            <label>Address line 1</label><br/>
+            {{ form.line1 }}
+          </div>
+          <div>
+            <label>Address line 2</label><br/>
+            {{ form.line2 }}
+          </div>
+          <div>
+            <label>City</label><br/>
+            {{ form.city }}
+          </div>
+          <div>
+            <label>Phone</label><br/>
+            {{ form.phone }}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;margin-top:4px;">
+            {{ form.is_default }}
+            <label style="margin:0;">Set as default address</label>
+          </div>
+
+          <button type="submit" class="btn" style="margin-top:6px;">
+            Save Address
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div style="margin-top:18px;">
+    <a href="{% url 'checkout' %}" class="btn btn-soft">
+      ← Back to Checkout
+    </a>
+  </div>
+</section>
+
+{% endblock %}
