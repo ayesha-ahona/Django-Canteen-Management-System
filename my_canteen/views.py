@@ -1,26 +1,18 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import HttpResponse, HttpResponseForbidden
 from django.db.models import Q, Avg, Count
 from django.contrib import messages
 from django.http import (
+    HttpResponse,
     HttpResponseForbidden,
     HttpResponseRedirect,
     JsonResponse,
-    HttpResponse,
 )
-import io
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.pagesizes import A4
-from reportlab.lib.units import mm
-from reportlab.lib import colors
-
 
 # ✅ Email verification imports
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -31,7 +23,17 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.core.paginator import Paginator
-from .models import MenuItem, Category, UserProfile, Order, OrderItem, Review, Payment, Favorite
+
+from .models import (
+    MenuItem,
+    Category,
+    UserProfile,
+    Order,
+    OrderItem,
+    Review,
+    Payment,
+    Favorite,
+)
 from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm, MenuItemForm
 
 
@@ -42,21 +44,22 @@ COUPON_CODES = {
     "STUDENT5": 5,     # 5% off
     "FESTIVE15": 15,   # 15% off
     "VIP25": 25,       # 25% off
-    "HAPPY30": 30,    # 30% off
-    "SAVE30": 30,     # 30% off
-    "MEAL40": 40,    # 40% off
-    "BUDGET35": 35,  # 35% off
-    "SNACK15": 15,   # 15% off
-    "LUNCH20": 20,  # 20% off
+    "HAPPY30": 30,     # 30% off
+    "SAVE30": 30,      # 30% off
+    "MEAL40": 40,      # 40% off
+    "BUDGET35": 35,    # 35% off
+    "SNACK15": 15,     # 15% off
+    "LUNCH20": 20,     # 20% off
 }
 
 
 # ========== Email Verification Token ==========
 class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
-        profile = getattr(user, 'userprofile', None)
-        verified = '1' if profile and profile.email_verified else '0'
+        profile = getattr(user, "userprofile", None)
+        verified = "1" if profile and profile.email_verified else "0"
         return f"{user.pk}{timestamp}{user.is_active}{verified}"
+
 
 email_token_generator = EmailVerificationTokenGenerator()
 
@@ -66,23 +69,26 @@ def send_verification_email(request, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = email_token_generator.make_token(user)
     verify_url = request.build_absolute_uri(
-        reverse('verify_email', kwargs={'uidb64': uid, 'token': token})
+        reverse("verify_email", kwargs={"uidb64": uid, "token": token})
     )
 
     subject = "Verify your email - Canteen"
-    message = f"Hello {user.username},\n\nPlease verify your account by clicking the link below:\n{verify_url}\n\nThanks!"
+    message = (
+        f"Hello {user.username},\n\n"
+        f"Please verify your account by clicking the link below:\n{verify_url}\n\nThanks!"
+    )
     send_mail(subject, message, None, [user.email])
 
 
 # ========== Custom Login View ==========
 class CustomLoginView(auth_views.LoginView):
-    template_name = 'my_canteen/login.html'
+    template_name = "my_canteen/login.html"
 
     def form_valid(self, form):
         user = form.get_user()
         if not user.userprofile.email_verified:
-            messages.error(self.request, "⚠️ Please verify your email before login.")
-            return redirect('login')
+            messages.error(self.request, "⚠ Please verify your email before login.")
+            return redirect("login")
         return super().form_valid(form)
 
 
@@ -92,17 +98,17 @@ def signup_page(request):
         form = CustomSignupForm(request.POST)
         if form.is_valid():
             user = form.save(commit=False)
-            user.email = form.cleaned_data['email']
+            user.email = form.cleaned_data["email"]
             user.is_active = True
             user.save()
 
-            role = form.cleaned_data.get('role', 'guest')
-            phone = form.cleaned_data.get('phone')
-            
+            role = form.cleaned_data.get("role", "guest")
+            phone = form.cleaned_data.get("phone")
+
             # প্রথম ইউজারকে admin
             if User.objects.count() == 1:
                 role = "admin"
-            
+
             profile = user.userprofile
             valid_roles = ["admin", "student", "faculty", "staff", "vendor", "guest"]
             profile.role = role if role in valid_roles else "guest"
@@ -112,12 +118,15 @@ def signup_page(request):
 
             # ✅ Send verification email
             send_verification_email(request, user)
-            messages.success(request, "✅ Account created! We sent a verification link to your email.")
-            return redirect('login')
+            messages.success(
+                request,
+                "✅ Account created! We sent a verification link to your email.",
+            )
+            return redirect("login")
     else:
         form = CustomSignupForm()
 
-    return render(request, 'my_canteen/signup.html', {'form': form})
+    return render(request, "my_canteen/signup.html", {"form": form})
 
 
 # ========== Verify Email ==========
@@ -134,10 +143,10 @@ def verify_email(request, uidb64, token):
         profile.save()
         login(request, user)
         messages.success(request, "🎉 Email verified! You are now logged in.")
-        return redirect('dashboard')
+        return redirect("dashboard")
     else:
         messages.error(request, "Invalid or expired verification link.")
-        return redirect('login')
+        return redirect("login")
 
 
 # ========== Resend Verification ==========
@@ -146,11 +155,11 @@ def resend_verification(request):
     profile = request.user.userprofile
     if profile.email_verified:
         messages.info(request, "Your email is already verified.")
-        return redirect('dashboard')
-    
+        return redirect("dashboard")
+
     send_verification_email(request, request.user)
     messages.success(request, "Verification link sent again to your email.")
-    return redirect('login')
+    return redirect("login")
 
 
 # ---------- Helpers ----------
@@ -195,9 +204,6 @@ def can_user_cancel(order, user) -> bool:
 
 
 # ========= AI Recommendation Helpers =========
-
-from django.db.models import Count
-
 def get_user_top_categories(user, limit=3):
     """
     ইউজার কোন কোন category থেকে বেশি খাবার খেয়েছে
@@ -207,13 +213,14 @@ def get_user_top_categories(user, limit=3):
         return []
 
     qs = (
-        OrderItem.objects
-        .filter(
+        OrderItem.objects.filter(
             order__user=user,
+            # ❌ আগের ভুল: order_status_in
             order__status__in=["delivered", "completed"],
+            # ❌ আগের ভুল: item_category_isnull
             item__category__isnull=False,
         )
-        .values("item__category")          # category id
+        .values("item__category")  # category id
         .annotate(cnt=Count("id"))
         .order_by("-cnt")
     )
@@ -241,13 +248,11 @@ def get_recommended_items(user, base_item=None, limit=6):
             qs = qs.filter(category__in=top_cats)
 
     # 3) fallback: কিছুই না পেলে সব active item
-    # (উপরে qs already all active, তাই extra কিছু লাগবে না)
 
-    # sort: popular + rating mix (simple version)
+    # sort: popular + name mix (simple version)
     qs = qs.order_by("-is_popular", "name")
 
     return qs[:limit]
-
 
 
 # ---------- Home ----------
@@ -259,11 +264,11 @@ def home(request):
 # ---------- Menu ----------
 def menu_page(request):
     # query params
-    q = request.GET.get('q', '').strip()
-    min_price = request.GET.get('min_price') or ''
-    max_price = request.GET.get('max_price') or ''
-    sort = request.GET.get('sort') or ''
-    active_cat = request.GET.get('cat') or ''  # keep as string for template
+    q = request.GET.get("q", "").strip()
+    min_price = request.GET.get("min_price") or ""
+    max_price = request.GET.get("max_price") or ""
+    sort = request.GET.get("sort") or ""
+    active_cat = request.GET.get("cat") or ""  # keep as string for template
 
     # base queryset
     items = MenuItem.objects.filter(is_active=True)
@@ -273,7 +278,7 @@ def menu_page(request):
         try:
             items = items.filter(category_id=int(active_cat))
         except ValueError:
-            active_cat = ''  # invalid cat id -> treat as "All"
+            active_cat = ""  # invalid cat id -> treat as "All"
 
     # search filter
     if q:
@@ -309,15 +314,18 @@ def menu_page(request):
         "sort": sort,
         "recommended_items": recommended_items,
     }
-    return render(request, 'my_canteen/menu.html', context)
-
+    return render(request, "my_canteen/menu.html", context)
 
 
 # ---------- Item Detail + Reviews ----------
 def item_detail(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
-    reviews = Review.objects.filter(item=item).select_related("user").order_by("-created_at")
+    reviews = (
+        Review.objects.filter(item=item)
+        .select_related("user")
+        .order_by("-created_at")
+    )
     agg = reviews.aggregate(avg=Avg("rating"), cnt=Count("id"))
     avg_rating = round(agg["avg"] or 0, 1)
     total_reviews = agg["cnt"] or 0
@@ -327,6 +335,7 @@ def item_detail(request, item_id):
     if request.user.is_authenticated:
         purchased = OrderItem.objects.filter(
             order__user=request.user,
+            # ❌ আগের ভুল: order_status_in
             order__status__in=["delivered", "completed"],
             item=item,
         ).exists()
@@ -356,7 +365,7 @@ def submit_review(request, item_id):
     # ✅ আবার সিকিউরিটি চেক
     purchased = OrderItem.objects.filter(
         order__user=request.user,
-        order__status__in=["delivered", "completed"],  # এখানেও একই
+        order__status__in=["delivered", "completed"],
         item=item,
     ).exists()
     if not purchased:
@@ -480,6 +489,7 @@ def view_cart(request):
     cart = request.session.get("cart", {})
     items, total = [], 0
 
+    # ------- মূল cart items + total -------
     for item_id, qty in cart.items():
         try:
             item = MenuItem.objects.get(id=item_id, is_active=True)
@@ -489,7 +499,33 @@ def view_cart(request):
         except MenuItem.DoesNotExist:
             continue
 
-    return render(request, "my_canteen/cart.html", {"items": items, "total": total})
+    # ------- Smart extra items (Pathao style 😎) -------
+    cart_ids = [int(i) for i in cart.keys()] if cart else []
+
+    extra_qs = MenuItem.objects.filter(is_active=True, stock__gt=0)
+    if cart_ids:
+        extra_qs = extra_qs.exclude(id__in=cart_ids)
+
+    cat_ids = {
+        entry["item"].category_id
+        for entry in items
+        if entry["item"].category_id
+    }
+
+    if cat_ids:
+        same_cat = extra_qs.filter(category_id__in=cat_ids)
+        others = extra_qs.exclude(category_id__in=cat_ids)
+        same_cat_count = same_cat.count()
+        extra_items = list(same_cat[:4]) + list(others[: max(0, 4 - same_cat_count)])
+    else:
+        extra_items = list(extra_qs[:4])
+
+    context = {
+        "items": items,
+        "total": total,
+        "extra_items": extra_items,
+    }
+    return render(request, "my_canteen/cart.html", context)
 
 
 # ---------- Checkout + Payment ----------
@@ -537,7 +573,10 @@ def checkout(request):
                 item.stock -= qty
                 item.save()
                 OrderItem.objects.create(
-                    order=order, item=item, quantity=qty, unit_price=item.price
+                    order=order,
+                    item=item,
+                    quantity=qty,
+                    unit_price=item.price,
                 )
 
             # Payment process
@@ -583,6 +622,7 @@ def checkout(request):
         },
     )
 
+
 def payment_start(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
     payment = order.payment
@@ -600,7 +640,9 @@ def payment_start(request, order_id):
                     {
                         "price_data": {
                             "currency": "usd",
-                            "product_data": {"name": f"Canteen Order #{order.id}"},
+                            "product_data": {
+                                "name": f"Canteen Order #{order.id}"
+                            },
                             "unit_amount": int(order.total_price * 100),
                         },
                         "quantity": 1,
@@ -664,13 +706,13 @@ def orders_page(request):
     if role in ["vendor", "admin"]:
         orders = Order.objects.all().order_by("-created_at")
     elif role == "staff":
-        orders = Order.objects.filter(
-            status__in=["accepted", "preparing"]
-        ).order_by("-created_at")
+        orders = (
+            Order.objects.filter(status__in=["accepted", "preparing"])
+            .order_by("-created_at")
+        )
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
 
-    # smart cancel: যে অর্ডারগুলো end-user ক্যানসেল করতে পারবে
     cancelable_ids = {o.id for o in orders if can_user_cancel(o, request.user)}
 
     return render(
@@ -700,31 +742,26 @@ def contact_anchor(request):
 # ---------- Dashboard (admin <-> vendor swap) ----------
 @login_required
 def dashboard(request):
-    """
-    UI label/heading: real_role (যেমন Admin/Vendor লিখে থাকবে)
-    কনটেন্ট/টেমপ্লেট + ডেটা: effective_role (admin <-> vendor swap)
-    """
     profile = UserProfile.objects.select_related("user").get(user=request.user)
 
     real_role = profile.role
     effective_role = get_effective_role(real_role)
 
-    # ডেটা লোডিং effective_role দিয়ে
     if effective_role in ["admin", "vendor"]:
         orders = Order.objects.all().order_by("-created_at")
         items = MenuItem.objects.all()
     elif effective_role == "staff":
-        orders = Order.objects.filter(
-            status__in=["accepted", "preparing"]
-        ).order_by("-created_at")
+        orders = (
+            Order.objects.filter(status__in=["accepted", "preparing"])
+            .order_by("-created_at")
+        )
         items = None
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
         items = None
 
-    # হেডিং real_role দিয়ে (UI)
     title_map = {
-        "admin": "🛠️ Admin Dashboard",
+        "admin": "🛠 Admin Dashboard",
         "vendor": "🏪 Vendor Dashboard",
         "staff": "👨‍🍳 Staff Dashboard",
         "student": "🎓 Student Dashboard",
@@ -733,7 +770,6 @@ def dashboard(request):
     }
     dashboard_title = title_map.get(real_role, "Dashboard")
 
-    # কনটেন্ট টেমপ্লেট effective_role দিয়ে নির্বাচন (swap)
     template_name = f"my_canteen/dashboard/{effective_role}.html"
 
     ctx = {
@@ -869,22 +905,16 @@ def order_mark_paid(request, order_id):
 # ---------- End-user Smart Cancel ----------
 @login_required
 def user_order_cancel(request, order_id):
-    """
-    Student / Faculty / Guest নিজের অর্ডার preparing-এর আগে পর্যন্ত ক্যানসেল করতে পারবে।
-    """
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    # চেক করো ক্যানসেল করা যাবে কিনা
     if not can_user_cancel(order, request.user):
         messages.error(request, "You can no longer cancel this order.")
         return redirect("orders")
 
-    # স্টক ফেরত দাও
     for oi in OrderItem.objects.filter(order=order).select_related("item"):
         oi.item.stock += oi.quantity
         oi.item.save(update_fields=["stock"])
 
-    # অর্ডারের স্ট্যাটাস আপডেট
     order.status = "cancelled"
     order.save(update_fields=["status"])
 
@@ -893,7 +923,6 @@ def user_order_cancel(request, order_id):
 
 
 # ---------- Vendor CRUD for Menu Items ----------
-
 @login_required
 def vendor_item_list(request):
     if not require_roles(request.user, ["vendor", "admin"]):
@@ -901,17 +930,17 @@ def vendor_item_list(request):
         return redirect("home")
 
     q = request.GET.get("q", "").strip()
-    
+
     qs = MenuItem.objects.all().order_by("-is_active", "name")
 
     if q:
-        qs = qs.filter(
-            Q(name__icontains=q) |
-            Q(description__icontains=q)
-        )
+        qs = qs.filter(Q(name__icontains=q) | Q(description__icontains=q))
 
     items = Paginator(qs, 10).get_page(request.GET.get("page"))
-    return render(request, "my_canteen/vendor/items_list.html", {"items": items, "q": q})
+    return render(
+        request, "my_canteen/vendor/items_list.html", {"items": items, "q": q}
+    )
+
 
 @login_required
 def vendor_item_create(request):
@@ -927,7 +956,12 @@ def vendor_item_create(request):
             return redirect("vendor_item_list")
     else:
         form = MenuItemForm()
-    return render(request, "my_canteen/vendor/item_form.html", {"form": form, "mode": "create"})
+    return render(
+        request,
+        "my_canteen/vendor/item_form.html",
+        {"form": form, "mode": "create"},
+    )
+
 
 @login_required
 def vendor_item_edit(request, pk):
@@ -944,7 +978,12 @@ def vendor_item_edit(request, pk):
             return redirect("vendor_item_list")
     else:
         form = MenuItemForm(instance=item)
-    return render(request, "my_canteen/vendor/item_form.html", {"form": form, "mode": "edit", "item": item})
+    return render(
+        request,
+        "my_canteen/vendor/item_form.html",
+        {"form": form, "mode": "edit", "item": item},
+    )
+
 
 @login_required
 def vendor_item_delete(request, pk):
@@ -955,9 +994,12 @@ def vendor_item_delete(request, pk):
     item = get_object_or_404(MenuItem, pk=pk)
     if request.method == "POST":
         item.delete()
-        messages.info(request, f"🗑️ '{item.name}' deleted successfully.")
+        messages.info(request, f"🗑 '{item.name}' deleted successfully.")
         return redirect("vendor_item_list")
-    return render(request, "my_canteen/vendor/item_confirm_delete.html", {"item": item})
+    return render(
+        request, "my_canteen/vendor/item_confirm_delete.html", {"item": item}
+    )
+
 
 @login_required
 def vendor_item_toggle_active(request, pk):
@@ -968,9 +1010,11 @@ def vendor_item_toggle_active(request, pk):
     item = get_object_or_404(MenuItem, pk=pk)
     item.is_active = not item.is_active
     item.save(update_fields=["is_active"])
-    messages.success(request, f"'{item.name}' has been {'activated ✅' if item.is_active else 'deactivated ❌'}.")
+    messages.success(
+        request,
+        f"'{item.name}' has been {'activated ✅' if item.is_active else 'deactivated ❌'}.",
+    )
     return redirect("vendor_item_list")
-
 
 
 # ---------- Favorites ----------
@@ -980,11 +1024,11 @@ def toggle_favorite(request, item_id):
 
     fav, created = Favorite.objects.get_or_create(user=request.user, item=item)
 
-    if not created:  
+    if not created:
         fav.delete()
-        messages.info(request, f"Removed from favorites.")
+        messages.info(request, "Removed from favorites.")
     else:
-        messages.success(request, f"Added to favorites!")
+        messages.success(request, "Added to favorites!")
 
     return redirect("item_detail", item_id=item.id)
 
@@ -995,146 +1039,18 @@ def favorites_page(request):
     return render(request, "my_canteen/favorites.html", {"fav_items": fav_items})
 
 
-
-# ---------- PDF Invoice Generation ----------
+# ---------- Invoice (HTML ভিত্তিক view, PDF না) ----------
 @login_required
 def order_invoice_pdf(request, order_id):
-    # অর্ডারটা বের করি, যাতে অন্য ইউজারের অর্ডার ডাউনলোড না করতে পারে
+    """
+    ReportLab ছাড়াই simple HTML invoice view।
+    URL name আগের মতই order_invoice_pdf, তাই urls.py পরিবর্তন লাগবে না।
+    """
     order = get_object_or_404(Order, id=order_id, user=request.user)
+    items = order.orderitem_set.select_related("item")
 
-    # ----- PDF buffer & canvas -----
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-    margin = 20 * mm
-
-    # ================= HEADER BAND =================
-    header_h = 25 * mm
-    c.setFillColor(colors.HexColor("#c62828"))
-    c.rect(0, height - header_h, width, header_h, fill=1, stroke=0)
-
-    c.setFillColor(colors.white)
-    c.setFont("Helvetica-Bold", 20)
-    c.drawString(margin, height - header_h + 10 * mm, "UAP CanteenX")
-
-    c.setFont("Helvetica", 11)
-    c.drawString(margin, height - header_h + 4 * mm, "Order Invoice")
-
-    # ================= ORDER & CUSTOMER INFO =================
-    y_left = height - header_h - 15 * mm
-    c.setFillColor(colors.black)
-
-    # Left side: order info
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(margin, y_left, "Order Details")
-
-    c.setFont("Helvetica", 11)
-    y_left -= 16
-    c.drawString(margin, y_left, f"Order ID: #{order.id}")
-    y_left -= 14
-    c.drawString(margin, y_left, f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}")
-
-    # Right side: customer info
-    info_x = width / 2
-    y_right = height - header_h - 15 * mm
-
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(info_x, y_right, "Customer")
-
-    c.setFont("Helvetica", 11)
-    y_right -= 16
-    c.drawString(info_x, y_right, f"Name: {order.user.username}")
-    y_right -= 14
-    c.drawString(info_x, y_right, f"Payment: {order.payment_status.title()}")
-    y_right -= 14
-    c.drawString(info_x, y_right, f"Status: {order.status.title()}")
-
-    # ================= SEPARATOR =================
-    y = min(y_left, y_right) - 22
-    c.setStrokeColor(colors.lightgrey)
-    c.setLineWidth(0.8)
-    c.line(margin, y, width - margin, y)
-
-    # ================= ITEMS TABLE =================
-    y -= 20
-    c.setFont("Helvetica-Bold", 12)
-    c.setFillColor(colors.black)
-    c.drawString(margin, y + 8, "Items")
-
-    y -= 18
-    row_h = 18
-    col_name = margin
-    col_qty = margin + 72 * mm
-    col_price = margin + 97 * mm
-    col_subtotal = margin + 127 * mm
-
-    # Table header background
-    c.setFillColor(colors.whitesmoke)
-    c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
-
-    # Header texts
-    c.setFillColor(colors.black)
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(col_name + 4, y + 4, "Item")
-    c.drawString(col_qty + 4, y + 4, "Qty")
-    c.drawString(col_price + 4, y + 4, "Price")
-    c.drawString(col_subtotal + 4, y + 4, "Subtotal")
-
-    # Rows
-    y -= row_h
-    c.setFont("Helvetica", 10)
-
-    for oi in order.orderitem_set.all():
-        # নতুন পেজ লাগলে
-        if y < 80 * mm:
-            c.showPage()
-            c = canvas.Canvas(buffer, pagesize=A4)
-            width, height = A4
-            margin = 20 * mm
-            y = height - margin
-
-        c.setFillColor(colors.white)
-        c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
-        c.setFillColor(colors.black)
-
-        # কলাম অনুযায়ী ডাটা
-        c.drawString(col_name + 4, y + 4, oi.item.name[:30])
-        c.drawString(col_qty + 4, y + 4, str(oi.quantity))
-        c.drawRightString(col_price + 35, y + 4, f"{oi.item.price:.2f} Tk")
-
-        subtotal = float(oi.item.price) * oi.quantity
-        c.drawRightString(col_subtotal + 40, y + 4, f"{subtotal:.2f} Tk")
-
-        y -= row_h
-
-    # ================= TOTAL BOX =================
-    y -= 22
-    c.setStrokeColor(colors.HexColor("#c62828"))
-    c.setLineWidth(1.2)
-    c.rect(col_price - 10, y - 6, (width - margin) - (col_price - 10), 24,
-           fill=0, stroke=1)
-
-    c.setFont("Helvetica-Bold", 12)
-    c.setFillColor(colors.black)
-    c.drawString(col_price, y + 2, "Total:")
-    c.drawRightString(width - margin - 6, y + 2, f"{order.total_price:.2f} Tk")
-
-    # ================= FOOTER =================
-    footer_y = 25 * mm
-    c.setStrokeColor(colors.lightgrey)
-    c.setLineWidth(0.6)
-    c.line(margin, footer_y + 10, width - margin, footer_y + 10)
-
-    c.setFont("Helvetica-Oblique", 9)
-    c.setFillColor(colors.grey)
-    c.drawString(margin, footer_y, "Thank you for ordering from UAP CanteenX ❤")
-    c.drawRightString(width - margin, footer_y, "This is a system generated invoice.")
-
-    # Finish
-    c.save()
-    buffer.seek(0)
-
-    filename = f"order_{order.id}_invoice.pdf"
-    response = HttpResponse(buffer, content_type="application/pdf")
-    response["Content-Disposition"] = f'attachment; filename=\"{filename}\"'
-    return response
+    context = {
+        "order": order,
+        "items": items,
+    }
+    return render(request, "my_canteen/order_invoice.html", context)
