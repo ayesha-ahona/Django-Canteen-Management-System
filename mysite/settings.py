@@ -64,6 +64,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'my_canteen.context_processors.cart_count',
                 'my_canteen.context_processors.favorites_processor',
+                'my_canteen.context_processors.notifications_context',
             ],
         },
     },

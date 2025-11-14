@@ -1,5 +1,3 @@
-# my_project/urls.py
-
 from django.contrib import admin
 from django.urls import path
 from my_canteen import views
@@ -102,7 +100,9 @@ urlpatterns = [
     path('favorites/', views.favorites_page, name='favorites'),
     path('favorite/<int:item_id>/toggle/', views.toggle_favorite, name='toggle_favorite'),
 
-
+    # ===== Notifications =====
+    path("notifications/", views.notifications_page, name="notifications"),
+    path("notifications/read/<int:pk>/", views.notification_mark_read, name="notification_mark_read"),
 ]
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
