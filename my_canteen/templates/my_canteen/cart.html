@@ -32,7 +32,7 @@
               <!-- Price -->
               <td>{{ entry.item.price }} Tk</td>
 
-              <!-- SMART ADD Quantity -->
+              <!-- SMART ADD Quantity (+ / -) -->
               <td class="cart-qty">
                 <div class="cart-qty-inner">
                   <!-- minus -->
@@ -90,7 +90,54 @@
         </div>
       </div>
 
-    </div>
+    </div>  {# cart-grid end #}
+
+    {# ===== SMART EXTRA ITEMS (Pathao style suggestions) ===== #}
+    {% if extra_items %}
+      <hr class="divider">
+
+      <div class="cart-suggestions">
+        <h3>➕ Want to add something extra?</h3>
+        <p class="muted">
+          Customers often add these with your current items.
+        </p>
+
+        <div class="card-grid">
+          {% for extra in extra_items %}
+            <div class="card surface">
+              <a class="card-media" href="{% url 'item_detail' extra.id %}">
+                {% if extra.image %}
+                  <img src="{{ extra.image.url }}" alt="{{ extra.name }}">
+                {% else %}
+                  <img src="https://via.placeholder.com/260x170?text=Food" alt="{{ extra.name }}">
+                {% endif %}
+              </a>
+
+              <div class="card-title">{{ extra.name }}</div>
+
+              <div class="card-meta">
+                <span class="price"><strong>{{ extra.price }} Tk</strong></span>
+                {% if extra.stock > 0 %}
+                  <span class="badge success">In Stock ({{ extra.stock }})</span>
+                {% else %}
+                  <span class="badge danger">Out</span>
+                {% endif %}
+              </div>
+
+              {% if extra.stock > 0 %}
+                <a href="{% url 'add_to_cart' extra.id %}"
+                   class="btn">
+                  Add to Cart
+                </a>
+              {% else %}
+                <button class="btn" disabled>Out of Stock</button>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+
   {% else %}
 
     <!-- Empty cart -->

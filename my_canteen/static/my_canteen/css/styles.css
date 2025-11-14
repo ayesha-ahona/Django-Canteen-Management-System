@@ -1509,6 +1509,17 @@ a {
     padding: 10px 0;
 }
 
+.cart-suggestions {
+    margin-top: 24px;
+}
+.cart-suggestions h3 {
+    margin-bottom: 4px;
+}
+.cart-suggestions p {
+    margin-bottom: 12px;
+}
+
+
 /* Responsive */
 @media (max-width: 768px) {
     .cart-grid {

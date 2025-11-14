@@ -477,6 +477,7 @@ def view_cart(request):
     cart = request.session.get("cart", {})
     items, total = [], 0
 
+    # ------- মূল cart items + total -------
     for item_id, qty in cart.items():
         try:
             item = MenuItem.objects.get(id=item_id, is_active=True)
@@ -486,7 +487,33 @@ def view_cart(request):
         except MenuItem.DoesNotExist:
             continue
 
-    return render(request, "my_canteen/cart.html", {"items": items, "total": total})
+    # ------- Smart extra items (Pathao style 😎) -------
+
+    # cart-এ থাকা item id গুলো
+    cart_ids = [int(i) for i in cart.keys()] if cart else []
+
+    # base queryset: active + in-stock items যেগুলো cart-এ নেই
+    extra_qs = MenuItem.objects.filter(is_active=True, stock__gt=0)
+    if cart_ids:
+        extra_qs = extra_qs.exclude(id__in=cart_ids)
+
+    # cart-এর category গুলো বের করি (একই ক্যাটাগরির suggestion আগে দেখাব)
+    cat_ids = {entry["item"].category_id for entry in items if entry["item"].category_id}
+
+    if cat_ids:
+        # আগে একই category, তারপর বাকিগুলো
+        same_cat = extra_qs.filter(category_id__in=cat_ids)
+        others = extra_qs.exclude(category_id__in=cat_ids)
+        extra_items = list(same_cat[:4]) + list(others[:4 - min(4, same_cat.count())])
+    else:
+        extra_items = list(extra_qs[:4])
+
+    context = {
+        "items": items,
+        "total": total,
+        "extra_items": extra_items,  # 👉 cart.html এ ব্যবহার করব
+    }
+    return render(request, "my_canteen/cart.html", context)
 
 
 # ---------- Checkout + Payment ----------
