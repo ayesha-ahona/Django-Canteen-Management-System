@@ -1,7 +1,10 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
 
-<h2>🍽️ Our Menu</h2>
+<h2>🍽 Our Menu</h2>
+<p class="muted" style="margin-bottom: 12px;">
+  Browse items, apply filters and add directly to cart.
+</p>
 
 <!-- ===== Search + Filters ===== -->
 <form method="get" class="search-filter-form">
@@ -30,6 +33,7 @@
 
 <!-- ===== Category Chips ===== -->
 <div class="chip-row">
+  <!-- All -->
   <a
     href="?{% if q %}q={{ q|urlencode }}&{% endif %}
           {% if min_price %}min_price={{ min_price }}&{% endif %}
@@ -59,26 +63,28 @@
   {% for item in items %}
     <div class="card surface">
 
+      <!-- Image + badges -->
       <a class="card-media" href="{% url 'item_detail' item.id %}">
-
         {% if item.image %}
           <img src="{{ item.image.url }}" alt="{{ item.name }}">
         {% else %}
           <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
         {% endif %}
 
-        <!-- STOCK BADGES (NO QUANTITY) -->
+        <!-- Stock badge -->
         {% if item.stock > 10 %}
           <span class="badge success">In Stock</span>
         {% elif item.stock > 0 %}
-          <span class="badge warning">Low Stock</span>
+          <span class="badge warn">Low Stock</span>
         {% else %}
           <span class="badge danger">Out of Stock</span>
         {% endif %}
 
-        <!-- Popular -->
+        <!-- Popular badge -->
         {% if item.is_popular %}
-          <span class="badge info" style="right:10px; top:10px;">Popular</span>
+          <span class="badge info" style="position:absolute;top:10px;right:10px;">
+            Popular
+          </span>
         {% endif %}
       </a>
 
@@ -106,7 +112,9 @@
 
       <!-- Add to Cart -->
       {% if item.stock > 0 %}
-        <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
+        <a href="{% url 'add_to_cart' item.id %}" class="btn">
+          Add to Cart
+        </a>
       {% else %}
         <p class="out-of-stock">Out of Stock</p>
       {% endif %}
@@ -122,15 +130,17 @@
 </div>
 
 <!-- ===== Recommended Section ===== -->
-{% if recommended %}
+{% if recommended_items %}
   <hr class="divider">
   <div class="recommended">
     <h3>⭐ Recommended For You</h3>
+    <p class="muted" style="margin-bottom: 10px;">
+      Based on your previous orders and popular choices.
+    </p>
 
     <div class="card-grid">
-      {% for item in recommended %}
+      {% for item in recommended_items %}
         <div class="card surface">
-
           <a class="card-media" href="{% url 'item_detail' item.id %}">
             {% if item.image %}
               <img src="{{ item.image.url }}" alt="{{ item.name }}">
@@ -138,32 +148,59 @@
               <img src="https://via.placeholder.com/300x200?text=No+Image" alt="{{ item.name }}">
             {% endif %}
 
-            <!-- STOCK BADGE (NO QUANTITY) -->
             {% if item.stock > 10 %}
               <span class="badge success">In Stock</span>
             {% elif item.stock > 0 %}
-              <span class="badge warning">Low Stock</span>
+              <span class="badge warn">Low Stock</span>
             {% else %}
               <span class="badge danger">Out of Stock</span>
             {% endif %}
           </a>
 
-          <a class="card-title" href="{% url 'item_detail' item.id %}">{{ item.name }}</a>
+          <a class="card-title" href="{% url 'item_detail' item.id %}">
+            {{ item.name }}
+          </a>
 
           <div class="card-meta">
             <span class="price"><strong>{{ item.price }} Tk</strong></span>
           </div>
 
           {% if item.stock > 0 %}
-            <a href="{% url 'add_to_cart' item.id %}" class="btn btn-primary">Add to Cart</a>
+            <a href="{% url 'add_to_cart' item.id %}" class="btn">
+              Add to Cart
+            </a>
           {% else %}
             <p class="out-of-stock">Out of Stock</p>
           {% endif %}
-
         </div>
       {% endfor %}
     </div>
   </div>
 {% endif %}
 
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+  // আলাদা আলাদা filter-combination অনুযায়ী আলাদা key
+  const key = "scroll_menu_" + window.location.search;
+
+  // page load হলে আগের scroll restore করো
+  window.addEventListener("load", function () {
+    const saved = sessionStorage.getItem(key);
+    if (saved !== null) {
+      const y = parseInt(saved);
+      if (!isNaN(y)) {
+        window.scrollTo(0, y);
+      }
+    }
+  });
+
+  // পেজ ছাড়ার আগেই current scroll save করো
+  window.addEventListener("beforeunload", function () {
+    sessionStorage.setItem(key, window.scrollY);
+  });
+})();
+</script>
 {% endblock %}

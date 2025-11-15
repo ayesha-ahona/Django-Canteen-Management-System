@@ -532,17 +532,26 @@ def add_to_cart(request, item_id):
     cart = request.session.get("cart", {})
     cart[str(item_id)] = cart.get(str(item_id), 0) + 1
     request.session["cart"] = cart
-    messages.success(request, "Item added to cart!")
+    messages.success(request, "Added to cart ✔")
+
+    # redirect back to the same place
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return redirect(referer)
     return redirect("menu")
 
 
 @login_required
 def add_to_cart_qty(request, item_id, qty):
-    qty = max(int(qty), 1)
     cart = request.session.get("cart", {})
+    qty = int(qty)
     cart[str(item_id)] = cart.get(str(item_id), 0) + qty
     request.session["cart"] = cart
-    messages.success(request, f"Added {qty} item(s) to cart.")
+    messages.success(request, f"Added {qty} items ✔")
+
+    referer = request.META.get("HTTP_REFERER")
+    if referer:
+        return redirect(referer)
     return redirect("menu")
 
 
