@@ -69,61 +69,34 @@ class CustomSignupForm(UserCreationForm):
 # ------------------------------------------------
 
 
-class ReviewForm(forms.ModelForm):
-    """
-    User feedback form — allows a logged-in user to rate and review a MenuItem.
-    """
+# my_canteen/forms.py
+from django import forms
+from .models import Review
 
+class ReviewForm(forms.ModelForm):
     class Meta:
         model = Review
         fields = ["rating", "comment"]
-        widgets = {
-            "rating": forms.Select(
-                choices=[(i, f"{i} ⭐") for i in range(1, 6)],
-                attrs={"class": "form-select"},
-            ),
-            "comment": forms.Textarea(
-                attrs={
-                    "rows": 3,
-                    "placeholder": "Write your honest feedback about this item...",
-                    "class": "form-control",
-                }
-            ),
-        }
-
-    def _init_(self, *args, **kwargs):
-        self.user = kwargs.pop("user", None)
-        self.item = kwargs.pop("item", None)
-        super()._init_(*args, **kwargs)
 
     def clean_rating(self):
-        rating = int(self.cleaned_data.get("rating"))
-        if rating < 1 or rating > 5:
-            raise ValidationError("Rating must be between 1 and 5.")
+        rating = self.cleaned_data.get("rating")
+
+        # 1) rating absent হলে ValidationError দাও, int() কোরো না
+        if rating in (None, ""):
+            raise forms.ValidationError("Please select a rating.")
+
+        # 2) string হলে int এ convert করো
+        try:
+            rating = int(rating)
+        except (TypeError, ValueError):
+            raise forms.ValidationError("Invalid rating value.")
+
+        # 3) range check
+        if not (1 <= rating <= 5):
+            raise forms.ValidationError("Rating must be between 1 and 5.")
+
         return rating
 
-    def clean(self):
-        """
-        Prevents duplicate reviews by the same user for the same item.
-        """
-        cleaned_data = super().clean()
-        if self.user and self.item:
-            if Review.objects.filter(user=self.user, item=self.item).exists():
-                raise ValidationError("You have already reviewed this item.")
-        return cleaned_data
-
-    def save(self, commit=True):
-        """
-        Automatically attach user & item before saving.
-        """
-        review = super().save(commit=False)
-        if self.user:
-            review.user = self.user
-        if self.item:
-            review.item = self.item
-        if commit:
-            review.save()
-        return review
 
 
 # ------------------------------------------------
