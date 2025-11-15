@@ -1,100 +1,150 @@
 {% extends "my_canteen/base.html" %}
 {% block content %}
 
-<h2>📊 Daily Sales Report</h2>
+<div style="max-width:1100px;margin:0 auto;">
 
-<form method="get" style="margin-bottom:20px;">
-  <label>Select Date:</label>
-  <input type="date" name="date" value="{{ target_date }}">
-  <button type="submit" class="btn">Filter</button>
-</form>
+  <!-- ===== Page Header ===== -->
+  <div style="margin-bottom:20px;">
+    <h2 style="margin-bottom:4px;">
+      📊 Daily Sales Report
+    </h2>
 
-<div class="surface" style="padding:16px;border-radius:10px;max-width:500px;margin-bottom:20px;">
-  <h3 style="margin-top:0;">Summary for {{ target_date }}</h3>
-  <p><strong>Total Orders:</strong> {{ total_orders }}</p>
-  <p><strong>Total Sales:</strong> {{ total_amount }} Tk</p>
-</div>
+    <!-- Filter form -->
+    <form method="get" style="display:flex;align-items:center;gap:8px;font-size:14px;">
+      <label for="id_date" style="font-weight:500;">Select Date:</label>
+      <input
+        type="date"
+        id="id_date"
+        name="date"
+        value="{{ target_date|date:'Y-m-d' }}"
+        style="padding:4px 8px;border-radius:6px;border:1px solid #d1d5db;font-size:14px;"
+      >
+      <button
+        type="submit"
+        class="btn"
+        style="padding:6px 14px;font-size:14px;"
+      >
+        Filter
+      </button>
+    </form>
+  </div>
 
-<h3>🧾 Orders</h3>
-<table class="orders-table pretty">
-  <thead>
+  <!-- ===== Summary Card ===== -->
+  <div
+    class="surface"
+    style="padding:16px 18px;border-radius:12px;margin-bottom:20px;border:1px solid #e5e7eb;"
+  >
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px;">
+      Summary for
+      <span style="color:#ef4444;">
+        {{ target_date|date:"M d, Y" }}
+      </span>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:18px;margin-top:8px;font-size:14px;">
+      <div>
+        <span style="font-weight:600;">Total Orders:</span>
+        {{ total_orders }}
+      </div>
+      <div>
+        <span style="font-weight:600;">Total Sales:</span>
+        {{ total_amount }} Tk
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Orders Table ===== -->
+  <h3 style="margin:18px 0 8px;">📑 Orders</h3>
+
+  <table class="orders-table pretty">
+    <thead>
       <tr>
-          <th>#</th>
-          <th>User</th>
-          <th>Total</th>
-          <th>Status</th>
-          <th>Time</th>
+        <th>#</th>
+        <th>User</th>
+        <th>Total</th>
+        <th>Status</th>
+        <th>Time</th>
       </tr>
-  </thead>
-  <tbody>
+    </thead>
+    <tbody>
       {% for order in orders %}
-      <tr>
+        <tr>
           <td>#{{ order.id }}</td>
           <td>{{ order.user.username }}</td>
           <td>{{ order.total_price }} Tk</td>
-          <td>{{ order.status|title }}</td>
-          <td>{{ order.created_at|date:"H:i" }}</td>
-      </tr>
-      {% empty %}
-      <tr>
-          <td colspan="5" style="text-align:center;padding:10px;color:#777;">
-              No orders found for this date.
+          <td>
+            <span class="status {{ order.status }}">
+              {{ order.status|title }}
+            </span>
           </td>
-      </tr>
+          <td>
+            {{ order.created_at|time:"h:i A" }}
+          </td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="5" style="text-align:center;padding:16px;color:#6b7280;">
+            No orders for this date.
+          </td>
+        </tr>
       {% endfor %}
-  </tbody>
-</table>
+    </tbody>
+  </table>
 
-<h3 style="margin-top:24px;">💳 Payment Methods</h3>
-<table class="orders-table pretty">
-  <thead>
+  <!-- ===== Payment Methods Summary ===== -->
+  <h3 style="margin:28px 0 8px;">💳 Payment Methods</h3>
+  <table class="orders-table pretty">
+    <thead>
       <tr>
-          <th>Method</th>
-          <th>Orders</th>
-          <th>Amount</th>
+        <th>Method</th>
+        <th>Orders</th>
+        <th>Amount</th>
       </tr>
-  </thead>
-  <tbody>
+    </thead>
+    <tbody>
       {% for row in payment_summary %}
-      <tr>
-          <td>{{ row.payment_method }}</td>
+        <tr>
+          <td>{{ row.payment_method|title }}</td>
           <td>{{ row.count }}</td>
           <td>{{ row.amount }} Tk</td>
-      </tr>
+        </tr>
       {% empty %}
-      <tr>
-          <td colspan="3" style="text-align:center;padding:10px;color:#777;">
-              No data.
+        <tr>
+          <td colspan="3" style="text-align:center;padding:16px;color:#6b7280;">
+            No payment data for this date.
           </td>
-      </tr>
+        </tr>
       {% endfor %}
-  </tbody>
-</table>
+    </tbody>
+  </table>
 
-<h3 style="margin-top:24px;">🍽 Item-wise Summary</h3>
-<table class="orders-table pretty">
-  <thead>
+  <!-- ===== Items Summary ===== -->
+  <h3 style="margin:28px 0 8px;">🍽 Items Sold</h3>
+  <table class="orders-table pretty">
+    <thead>
       <tr>
-          <th>Item</th>
-          <th>Qty</th>
-          <th>Revenue</th>
+        <th>Item</th>
+        <th>Quantity</th>
+        <th>Revenue</th>
       </tr>
-  </thead>
-  <tbody>
+    </thead>
+    <tbody>
       {% for row in items_summary %}
-      <tr>
+        <tr>
           <td>{{ row.item__name }}</td>
           <td>{{ row.qty }}</td>
           <td>{{ row.revenue }} Tk</td>
-      </tr>
+        </tr>
       {% empty %}
-      <tr>
-          <td colspan="3" style="text-align:center;padding:10px;color:#777;">
-              No items sold.
+        <tr>
+          <td colspan="3" style="text-align:center;padding:16px;color:#6b7280;">
+            No items sold for this date.
           </td>
-      </tr>
+        </tr>
       {% endfor %}
-  </tbody>
-</table>
+    </tbody>
+  </table>
+
+</div>
 
 {% endblock %}
