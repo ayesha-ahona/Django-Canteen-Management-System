@@ -1,3 +1,6 @@
+from datetime import datetime
+import io
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
@@ -7,14 +10,15 @@ from django.http import (
     JsonResponse,
     HttpResponse,
 )
-from django.db.models import Q, Avg, Count
+from django.db.models import Q, Avg, Count, Sum, F
 from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
-
-import io
+from django.contrib.auth import login
+from django.contrib.auth import views as auth_views
+from django.core.paginator import Paginator
 
 # ========= PDF =========
 from reportlab.pdfgen import canvas
@@ -31,11 +35,6 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.contrib.auth import login
-from django.contrib.auth import views as auth_views
-from django.core.paginator import Paginator
-from django.db.models import Count as CountAgg
-from django.db.models import Count
 
 from .models import (
     MenuItem,
@@ -234,10 +233,8 @@ def get_user_top_categories(user, limit=3):
     qs = (
         OrderItem.objects.filter(
             order__user=user,
-            # order.status IN (...)
             order__status__in=["delivered", "completed"],
         )
-        # item.category IS NOT NULL
         .exclude(item__category__isnull=True)
         .values("item__category")
         .annotate(cnt=Count("id"))
@@ -275,12 +272,11 @@ def home(request):
 
 # ---------- Menu ----------
 def menu_page(request):
-    # query params
     q = request.GET.get("q", "").strip()
     min_price = request.GET.get("min_price") or ""
     max_price = request.GET.get("max_price") or ""
     sort = request.GET.get("sort") or ""
-    active_cat = request.GET.get("cat") or ""  # string হিসেবেই রাখলাম
+    active_cat = request.GET.get("cat") or ""
 
     items = MenuItem.objects.filter(is_active=True)
 
@@ -289,7 +285,7 @@ def menu_page(request):
         try:
             items = items.filter(category_id=int(active_cat))
         except ValueError:
-            active_cat = ""  # invalid id
+            active_cat = ""
 
     # search filter
     if q:
@@ -344,8 +340,10 @@ def item_detail(request, item_id):
     total_reviews = agg["cnt"] or 0
 
     can_review, already, form = False, False, None
+    favorite_items = set()
 
     if request.user.is_authenticated:
+        # কিনেছে কিনা check
         purchased = OrderItem.objects.filter(
             order__user=request.user,
             order__status__in=["delivered", "completed"],
@@ -358,6 +356,12 @@ def item_detail(request, item_id):
         if can_review:
             form = ReviewForm()
 
+        # favorites list (template-এ: item.id in favorite_items)
+        favorite_items = set(
+            Favorite.objects.filter(user=request.user)
+            .values_list("item_id", flat=True)
+        )
+
     context = {
         "item": item,
         "reviews": reviews,
@@ -366,6 +370,7 @@ def item_detail(request, item_id):
         "can_review": can_review,
         "already": already,
         "form": form,
+        "favorite_items": favorite_items,
     }
     return render(request, "my_canteen/item_detail.html", context)
 
@@ -388,17 +393,27 @@ def submit_review(request, item_id):
         return redirect("item_detail", item_id=item.id)
 
     if request.method == "POST":
-        form = ReviewForm(request.POST)
-        if form.is_valid():
-            Review.objects.create(
-                user=request.user,
-                item=item,
-                rating=form.cleaned_data["rating"],
-                comment=form.cleaned_data["comment"],
-            )
-            messages.success(request, "Thank you for your feedback!")
-        else:
-            messages.error(request, "Invalid input.")
+        # এখানে সরাসরি POST থেকে rating + comment নিচ্ছি,
+        # যাতে form mismatch হলেও কাজ করে
+        try:
+            rating = int(request.POST.get("rating", 0))
+        except ValueError:
+            rating = 0
+
+        comment = request.POST.get("comment", "").strip()
+
+        if rating < 1 or rating > 5:
+            messages.error(request, "Please select a rating between 1 and 5 stars.")
+            return redirect("item_detail", item_id=item.id)
+
+        Review.objects.create(
+            user=request.user,
+            item=item,
+            rating=rating,
+            comment=comment,
+        )
+        messages.success(request, "Thank you for your feedback!")
+
     return redirect("item_detail", item_id=item.id)
 
 
@@ -442,7 +457,6 @@ def add_to_cart(request, item_id):
     request.session["cart"] = cart
     messages.success(request, "Added to cart ✔")
 
-    # ⬅ redirect back (scroll position ব্রাউজার handle করবে)
     referer = request.META.get("HTTP_REFERER")
     if referer:
         return redirect(referer)
@@ -513,7 +527,6 @@ def view_cart(request):
     total = 0
     item_ids = []
 
-    # মূল cart items
     for item_id, qty in cart.items():
         try:
             item = MenuItem.objects.get(id=item_id, is_active=True)
@@ -562,7 +575,6 @@ def checkout(request):
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
 
-    # cart items + subtotal
     cart_items = []
     total = 0
     for item_id, qty in cart.items():
@@ -571,8 +583,9 @@ def checkout(request):
         cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
         total += subtotal
 
-    # address list
-    addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
+    addresses = Address.objects.filter(user=request.user).order_by(
+        "-is_default", "-id"
+    )
 
     coupon_code = ""
     discount_amount = 0
@@ -974,7 +987,6 @@ def order_accept(request, order_id):
     order.save(update_fields=["status"])
     messages.success(request, f"Order #{order.id} accepted.")
 
-    # notify customer
     send_notification(
         user=order.user,
         title="Order accepted",
@@ -1126,17 +1138,12 @@ def order_mark_paid(request, order_id):
 # ---------- End-user Smart Cancel ----------
 @login_required
 def user_order_cancel(request, order_id):
-    """
-    Student / Faculty / Guest নিজের order cancel করতে পারবে
-    যতক্ষণ pending/accepted.
-    """
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
     if not can_user_cancel(order, request.user):
         messages.error(request, "You can no longer cancel this order.")
         return redirect("orders")
 
-    # stock back
     for oi in OrderItem.objects.filter(order=order).select_related("item"):
         oi.item.stock += oi.quantity
         oi.item.save(update_fields=["stock"])
@@ -1160,9 +1167,6 @@ def user_order_cancel(request, order_id):
 # ---------- Reorder Previous Order ----------
 @login_required
 def reorder_order(request, order_id):
-    """
-    Delivered/completed order থেকে আবার cart এ add করা।
-    """
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
     if order.status not in ["delivered", "completed"]:
@@ -1325,11 +1329,6 @@ def favorites_page(request):
 # ---------- PDF Invoice ----------
 @login_required
 def order_invoice_pdf(request, order_id):
-    """
-    Invoice:
-    - normal user → only own order
-    - vendor/admin → any order
-    """
     role = get_role(request.user)
     if role in ["vendor", "admin"]:
         qs = Order.objects.all()
@@ -1505,18 +1504,12 @@ def order_invoice_pdf(request, order_id):
 # ---------- Notifications ----------
 @login_required
 def notifications_page(request):
-    """
-    সব notification list আকারে।
-    """
     notifs = Notification.objects.filter(user=request.user).order_by('-created_at')
     return render(request, "my_canteen/notifications.html", {"notifs": notifs})
 
 
 @login_required
 def notification_mark_read(request, pk):
-    """
-    Notification read করলে, link থাকলে সেদিকে redirect।
-    """
     notif = get_object_or_404(Notification, pk=pk, user=request.user)
     notif.is_read = True
     notif.save(update_fields=["is_read"])
@@ -1532,3 +1525,63 @@ def notification_mark_read(request, pk):
 def address_list(request):
     addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
     return render(request, "my_canteen/address_list.html", {"addresses": addresses})
+
+
+# ---------- Daily Sales Report ----------
+@login_required
+def daily_sales_report(request):
+    # শুধু vendor / admin-ই দেখতে পারবে
+    if not require_roles(request.user, ["vendor", "admin"]):
+        messages.error(request, "Only vendor/admin can see sales report.")
+        return redirect("dashboard")
+
+    # কোন date-এর report? GET parameter থেকে নেবো, default = আজ
+    date_str = request.GET.get("date")
+    if date_str:
+        try:
+            target_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except ValueError:
+            target_date = timezone.localdate()
+    else:
+        target_date = timezone.localdate()
+
+    # ওই দিনের paid + delivered/completed orders
+    orders_qs = Order.objects.filter(
+        created_at__date=target_date,
+        status__in=["delivered", "completed"],
+        payment_status="paid",
+    ).order_by("-created_at")
+
+    total_orders = orders_qs.count()
+    total_amount = orders_qs.aggregate(total=Sum("total_price"))["total"] or 0
+
+    # payment method-wise summary
+    payment_summary = (
+        orders_qs.values("payment_method")
+        .annotate(
+            count=Count("id"),
+            amount=Sum("total_price"),
+        )
+        .order_by("payment_method")
+    )
+
+    # ওই দিনে কোন item কতবার বিক্রি হয়েছে + কত টাকা এসেছে
+    items_qs = (
+        OrderItem.objects.filter(order__in=orders_qs)
+        .values("item__name")
+        .annotate(
+            qty=Sum("quantity"),
+            revenue=Sum(F("quantity") * F("unit_price")),
+        )
+        .order_by("-qty")
+    )
+
+    context = {
+        "target_date": target_date,
+        "orders": orders_qs,
+        "total_orders": total_orders,
+        "total_amount": total_amount,
+        "payment_summary": payment_summary,
+        "items_summary": items_qs,
+    }
+    return render(request, "my_canteen/reports/daily_sales.html", context)
