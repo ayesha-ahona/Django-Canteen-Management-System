@@ -1,0 +1,42 @@
+{% extends "my_canteen/base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 800px; margin-top: 24px;">
+
+  <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:16px;">
+    <span style="font-size:22px;">💰</span>
+    <h2 style="margin:0;">My Spending Summary</h2>
+  </div>
+
+  <p style="color:#666;margin-bottom:20px;">
+    This summary includes only <strong>paid</strong> and <strong>non-cancelled</strong> orders.
+  </p>
+
+  <div style="display:flex;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+    <div style="flex:1 1 200px;background:#fff;border:1px solid #eee;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.03);">
+      <div style="font-size:.85rem;color:#777;">Total spent</div>
+      <div style="font-size:1.6rem;font-weight:600;margin-top:6px;">
+        {{ total_spent|floatformat:2 }} Tk
+      </div>
+    </div>
+
+    <div style="flex:1 1 200px;background:#fff;border:1px solid #eee;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.03);">
+      <div style="font-size:.85rem;color:#777;">Total orders</div>
+      <div style="font-size:1.6rem;font-weight:600;margin-top:6px;">
+        {{ order_count }}
+      </div>
+    </div>
+
+    <div style="flex:1 1 200px;background:#fff;border:1px solid #eee;border-radius:12px;padding:16px;box-shadow:0 2px 8px rgba(0,0,0,.03);">
+      <div style="font-size:.85rem;color:#777;">Average per order</div>
+      <div style="font-size:1.6rem;font-weight:600;margin-top:6px;">
+        {{ avg_per_order|floatformat:2 }} Tk
+      </div>
+    </div>
+  </div>
+
+  <a href="{% url 'orders' %}" style="text-decoration:none;color:#c62828;font-size:.9rem;">
+    ← Back to My Orders
+  </a>
+</div>
+{% endblock %}
