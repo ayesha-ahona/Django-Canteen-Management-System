@@ -12,21 +12,21 @@
     <p style="margin:0;font-size:14px;color:#666;">Add, edit, delete and control stock.</p>
   </a>
 
-  <!-- View All Orders page -->
+  <!-- All Orders -->
   <a href="{% url 'orders' %}" class="surface"
      style="padding:16px;border-radius:10px;text-decoration:none;display:block;">
     <h3 style="margin:0 0 6px;">📦 All Orders</h3>
-    <p style="margin:0;font-size:14px;color:#666;">See full order history.</p>
+    <p style="margin:0;font-size:14px;color:#666;">See complete order list.</p>
   </a>
 
-  <!-- Go to Cart -->
+  <!-- Cart -->
   <a href="{% url 'cart' %}" class="surface"
      style="padding:16px;border-radius:10px;text-decoration:none;display:block;">
     <h3 style="margin:0 0 6px;">🛍 Cart</h3>
     <p style="margin:0;font-size:14px;color:#666;">Check current cart items.</p>
   </a>
 
-  <!-- Settings -->
+  <!-- Account Settings -->
   <a href="{% url 'settings' %}" class="surface"
      style="padding:16px;border-radius:10px;text-decoration:none;display:block;">
     <h3 style="margin:0 0 6px;">⚙ Account Settings</h3>
@@ -34,171 +34,147 @@
   </a>
 </div>
 
-<!-- ===== LIVE ORDERS (FULL LIFECYCLE) ===== -->
-<h3 style="margin-top:8px;">🚚 Live Orders (Vendor / Admin Control)</h3>
-<p class="muted" style="margin-bottom:10px;">
-  Update order status: Accept → Preparing → Ready → Delivered → Completed.
+<!-- ===== LIVE ORDERS TO PROCESS ===== -->
+<h3 id="live-orders" style="margin-bottom:8px;">👨‍🍳 Orders to Handle</h3>
+<p class="muted" style="margin-top:0;margin-bottom:12px;font-size:13px;">
+  Use these buttons to move orders: <strong>Accept → Preparing → Ready → Delivered → Paid → Completed</strong>.
 </p>
 
-<table class="orders-table pretty" style="width:100%;margin-top:4px;">
+<table class="orders-table pretty">
   <thead>
     <tr>
       <th>#</th>
-      <th>Placed</th>
-      <th>Customer</th>
+      <th>User</th>
       <th>Items</th>
       <th>Total</th>
-      <th>Pay</th>
       <th>Status</th>
+      <th>Payment</th>
       <th style="text-align:right;">Actions</th>
     </tr>
   </thead>
   <tbody>
   {% for order in orders %}
     <tr>
-      <!-- ID -->
       <td>
         <div class="order-line">
           <span class="dot"></span>
-          <span>#{{ order.id }}</span>
+          <div>
+            <div>#{{ order.id }}</div>
+            <div class="sub" style="font-size:12px;color:#888;">
+              {{ order.created_at|date:"M d, H:i" }}
+            </div>
+          </div>
         </div>
       </td>
 
-      <!-- Time -->
-      <td>
-        <div class="when">
-          {{ order.created_at|date:"M d, Y" }}<br>
-          <span class="sub">{{ order.created_at|date:"h:i a" }}</span>
-        </div>
-      </td>
-
-      <!-- Customer -->
       <td>
         {{ order.user.username }}
+        <div class="sub" style="font-size:12px;color:#888;">
+          {{ order.user.email }}
+        </div>
       </td>
 
-      <!-- Items -->
-      <td>
+      <td style="font-size:13px;">
         {% for oi in order.orderitem_set.all %}
-          <div class="order-line">
-            {{ oi.item.name }} × {{ oi.quantity }}
-          </div>
+          {{ oi.item.name }} × {{ oi.quantity }}<br>
         {% endfor %}
       </td>
 
-      <!-- Total -->
-      <td>{{ order.total_price }} Tk</td>
+      <td>
+        <strong>{{ order.total_price }} Tk</strong>
+      </td>
 
-      <!-- Payment -->
+      <td>
+        <span class="status {{ order.status }}">
+          {{ order.status|title }}
+        </span>
+      </td>
+
       <td>
         {% if order.payment_status == "paid" %}
           <span class="badge success">Paid</span>
         {% else %}
           <span class="badge warn">Unpaid</span>
         {% endif %}
+        <div style="margin-top:4px;">
+          <a href="{% url 'order_invoice_pdf' order.id %}"
+             class="btn btn-soft"
+             style="padding:4px 8px;font-size:12px;">
+            Invoice
+          </a>
+        </div>
       </td>
 
-      <!-- Status -->
-      <td>
-        {% if order.status == "completed" %}
-          <span class="badge success">Completed</span>
-        {% elif order.status == "delivered" %}
-          <span class="badge blue">Delivered</span>
-        {% elif order.status == "ready" %}
-          <span class="badge primary">Ready</span>
-        {% elif order.status == "preparing" %}
-          <span class="badge warn">Preparing</span>
-        {% elif order.status == "accepted" %}
-          <span class="badge info">Accepted</span>
-        {% elif order.status == "cancelled" %}
-          <span class="badge danger">Cancelled</span>
-        {% else %}
-          <span class="badge gray">Pending</span>
-        {% endif %}
-      </td>
-
-      <!-- Actions -->
-      <td class="actions" style="text-align:right;min-width:220px;">
-        <!-- status-wise buttons -->
+      <td class="actions" style="text-align:right;white-space:nowrap;">
         {% if order.status == "pending" %}
-          <!-- Accept -->
-          <form action="{% url 'order_accept' order.id %}" method="post" style="display:inline;">
+          <form method="post" action="{% url 'order_accept' order.id %}" style="display:inline;">
             {% csrf_token %}
-            <button class="btn" type="submit" style="padding:6px 10px;font-size:13px;">
+            <button type="submit" class="btn" style="padding:6px 10px;font-size:12px;">
               Accept
             </button>
           </form>
-
-          <!-- Cancel -->
-          <form action="{% url 'order_cancel' order.id %}" method="post" style="display:inline;">
+          <form method="post" action="{% url 'order_cancel' order.id %}" style="display:inline;">
             {% csrf_token %}
-            <button class="btn-soft-danger" type="submit" style="padding:6px 10px;font-size:13px;">
+            <button type="submit" class="btn-soft-danger" style="padding:6px 10px;font-size:12px;">
               Cancel
             </button>
           </form>
 
         {% elif order.status == "accepted" %}
-          <!-- Preparing -->
-          <form action="{% url 'order_preparing' order.id %}" method="post" style="display:inline;">
+          <form method="post" action="{% url 'order_preparing' order.id %}" style="display:inline;">
             {% csrf_token %}
-            <button class="btn" type="submit" style="padding:6px 10px;font-size:13px;">
-              Set Preparing
+            <button type="submit" class="btn" style="padding:6px 10px;font-size:12px;">
+              Preparing
             </button>
           </form>
-
-          <!-- Cancel -->
-          <form action="{% url 'order_cancel' order.id %}" method="post" style="display:inline;">
+          <form method="post" action="{% url 'order_cancel' order.id %}" style="display:inline;">
             {% csrf_token %}
-            <button class="btn-soft-danger" type="submit" style="padding:6px 10px;font-size:13px;">
+            <button type="submit" class="btn-soft-danger" style="padding:6px 10px;font-size:12px;">
               Cancel
             </button>
           </form>
 
         {% elif order.status == "preparing" %}
-          <!-- Ready -->
-          <form action="{% url 'order_ready' order.id %}" method="post" style="display:inline;">
+          <form method="post" action="{% url 'order_ready' order.id %}" style="display:inline;">
             {% csrf_token %}
-            <button class="btn" type="submit" style="padding:6px 10px;font-size:13px;">
-              Mark Ready
+            <button type="submit" class="btn" style="padding:6px 10px;font-size:12px;">
+              Ready
             </button>
           </form>
 
         {% elif order.status == "ready" %}
-          <!-- Delivered -->
-          <form action="{% url 'order_delivered' order.id %}" method="post" style="display:inline;">
+          <form method="post" action="{% url 'order_delivered' order.id %}" style="display:inline;">
             {% csrf_token %}
-            <button class="btn" type="submit" style="padding:6px 10px;font-size:13px;">
-              Mark Delivered
+            <button type="submit" class="btn" style="padding:6px 10px;font-size:12px;">
+              Delivered
             </button>
           </form>
 
         {% elif order.status == "delivered" %}
-          <!-- Completed (only if paid) -->
-          {% if order.payment_status == "paid" %}
-            <form action="{% url 'order_completed' order.id %}" method="post" style="display:inline;">
+          {% if order.payment_status != "paid" %}
+            <form method="post" action="{% url 'order_mark_paid' order.id %}" style="display:inline;">
               {% csrf_token %}
-              <button class="btn" type="submit" style="padding:6px 10px;font-size:13px;">
-                Complete
+              <button type="submit" class="btn" style="padding:6px 10px;font-size:12px;">
+                Mark Paid
               </button>
             </form>
           {% endif %}
-        {% endif %}
-
-        <!-- Mark as Paid (global, if unpaid) -->
-        {% if order.payment_status != "paid" and order.status not in "cancelled" %}
-          <form action="{% url 'order_mark_paid' order.id %}" method="post" style="display:inline;margin-left:4px;">
+          <form method="post" action="{% url 'order_completed' order.id %}" style="display:inline;">
             {% csrf_token %}
-            <button class="btn-soft" type="submit" style="padding:6px 10px;font-size:13px;">
-              Mark Paid
+            <button type="submit" class="btn btn-soft" style="padding:6px 10px;font-size:12px;">
+              Complete
             </button>
           </form>
+
+        {% else %}
+          <em style="color:#6b7280;font-size:12px;">No actions</em>
         {% endif %}
       </td>
     </tr>
   {% empty %}
     <tr>
-      <td colspan="8" style="padding:18px;text-align:center;color:#777;">
-        No orders yet.
+      <td colspan="7" style="text-align:center;padding:18px;color:#777;">
+        No deliveries yet.
       </td>
     </tr>
   {% endfor %}
@@ -206,7 +182,7 @@
 </table>
 
 <!-- ===== PROFILE SUMMARY ===== -->
-<h3 style="margin-top:24px;">👤 Profile</h3>
+<h3 style="margin-top:28px;">👤 Profile</h3>
 <div class="profile-card"
      style="border:1px solid #e5e7eb;border-radius:12px;padding:12px;max-width:420px;">
   <p><strong>Name:</strong> {{ profile.user.username }}</p>
