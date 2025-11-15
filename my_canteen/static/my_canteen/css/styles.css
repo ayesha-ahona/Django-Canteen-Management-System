@@ -401,7 +401,7 @@ a {
     background: #b71c1c;
 }
 
-/* ===== Search / Filter Form ===== */
+/* ===== Search /Filter Form ===== */
 .search-filter-form {
     margin-bottom: 20px;
     display: flex;
@@ -730,7 +730,7 @@ a {
     margin-top: 20px;
 }
 
-/* ===== Review / Feedback ===== */
+/* ===== Review /Feedback ===== */
 .feedback-section {
     background: #fff;
     padding: 25px;
@@ -738,7 +738,7 @@ a {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
-/* stars */
+/* Stars */
 .stars {
     display: inline-flex;
     align-items: center;
@@ -1094,7 +1094,7 @@ a {
     color: #d32f2f;
 }
 
-/* দুই কলাম layout */
+/* Two column layout */
 .checkout-grid {
     display: grid;
     grid-template-columns: 3fr 2fr;
@@ -1273,7 +1273,7 @@ a {
     background: #b71c1c;
 }
 
-/* Back link নিচে আলাদা */
+/* Back link is separate below */
 .checkout-back-link {
     margin-top: 8px;
 }
@@ -1292,7 +1292,7 @@ a {
     color: #d32f2f;
 }
 
-/* দুই কলামের লে–আউট */
+/* Two column layout */
 .cart-grid {
     display: grid;
     grid-template-columns: 3fr 2fr;
@@ -1339,7 +1339,7 @@ a {
     font-size: 14px;
 }
 
-/* নিচের লিঙ্ক */
+/* Link below */
 .cart-bottom-links {
     margin-top: 12px;
 }
@@ -1639,7 +1639,7 @@ a {
 
 /* ===== Responsive ===== */
 
-/* checkout layout ছোট হলে single column */
+/* Single column if checkout layout is small */
 @media (max-width: 900px) {
     .checkout-grid {
         grid-template-columns: 1fr;
@@ -1704,7 +1704,7 @@ a {
     }
 }
 
-/* checkout এ ছোট স্ক্রিনে coupon ইনপুট column করা */
+/* Coupon input column on small screen at checkout */
 @media (max-width: 600px) {
     .coupon-input {
         flex-direction: column;

@@ -267,8 +267,8 @@ def can_user_cancel(order, user) -> bool:
 
 def get_user_top_categories(user, limit=3):
     """
-    ইউজার কোন কোন category থেকে বেশি খাবার খেয়েছে
-    (delivered/completed অর্ডার থেকে হিসাব করব)
+    User has eaten more food from any category
+    (calculated from delivered/completed order)
     """
     if not user.is_authenticated:
         return Category.objects.none()
@@ -297,9 +297,9 @@ def get_user_top_categories(user, limit=3):
 
 def get_recommended_items(user, base_item=None, limit=6):
     """
-    - base_item থাকলে → similar category + popular
-    - না থাকলে → ইউজারের top categories
-    - new user হলে → popular items
+    -If base_item → similar category + popular
+    -If not → user's top categories
+    -If new user → popular items
     """
     qs = MenuItem.objects.filter(is_active=True)
 
@@ -318,6 +318,7 @@ def get_recommended_items(user, base_item=None, limit=6):
             qs = qs.filter(category__in=top_cats)
 
     # 3) fallback: সব active items
+
 
 
     qs = qs.order_by("-is_popular", "name")
@@ -1005,23 +1006,19 @@ def contact_anchor(request):
     return HttpResponseRedirect(f"{reverse('home')}#contact")
 
 
-# ----------Dashboard (admin <-> vendor swap) ----------
-
-
+# ---------- Dashboard (admin <-> vendor swap) ----------
 @login_required
 def dashboard(request):
     """
-    UI label/heading: real_role (যেমন Admin/Vendor লিখে থাকবে)
-    কনটেন্ট/টেমপ্লেট + ডেটা: effective_role (admin <-> vendor swap)
+    UI label/heading + template: real_role (admin/admin.html, vendor/vendor.html)
+    Data/permissions: effective_role (admin <-> vendor swap).
     """
     profile = UserProfile.objects.select_related("user").get(user=request.user)
 
     real_role = profile.role
     effective_role = get_effective_role(real_role)
 
-    # With data loading effective_role
-
-
+    # ডেটা লোডিং effective_role দিয়ে (swap only for permissions/data)
     if effective_role in ["admin", "vendor"]:
         orders = Order.objects.all().order_by("-created_at")
         items = MenuItem.objects.all()
@@ -1034,11 +1031,9 @@ def dashboard(request):
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
         items = None
 
-    # (UI) with heading real_role
-
-
+    # হেডিং real_role দিয়ে (UI)
     title_map = {
-        "admin": "🛠 Admin Dashboard",
+        "admin": "🛠️ Admin Dashboard",
         "vendor": "🏪 Vendor Dashboard",
         "staff": "👨‍🍳 Staff Dashboard",
         "student": "🎓 Student Dashboard",
@@ -1047,10 +1042,8 @@ def dashboard(request):
     }
     dashboard_title = title_map.get(real_role, "Dashboard")
 
-    # Selection (swap) with content template effective_role
-
-
-    template_name = f"my_canteen/dashboard/{effective_role}.html"
+    # ✅ এখন template real_role দিয়ে নেব
+    template_name = f"my_canteen/dashboard/{real_role}.html"
 
     ctx = {
         "profile": profile,
@@ -1308,7 +1301,7 @@ def order_mark_paid(request, order_id):
 @login_required
 def user_order_cancel(request, order_id):
     """
-    Student / Faculty / Guest নিজের অর্ডার preparing-এর আগে পর্যন্ত ক্যানসেল করতে পারবে।
+    Student /Faculty /Guest can cancel their order before preparing.
     """
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
@@ -1350,8 +1343,8 @@ def user_order_cancel(request, order_id):
 @login_required
 def reorder_order(request, order_id):
     """
-    Previous order থেকে সব available item আবার cart এ add করে।
-    শুধু নিজে যে order করেছিল সেটা এবং delivered/completed order এর জন্য।
+    Add all the available items from the previous order to the cart.
+    Only for the order itself and delivered/completed order.
     """
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
@@ -1738,7 +1731,7 @@ def order_invoice_pdf(request, order_id):
 @login_required
 def notifications_page(request):
     """
-    নিজের সব notification list আকারে দেখাবে (নতুনটাই উপরে)
+    All your notifications will show in list form (newest one above).
     """
     notifs = Notification.objects.filter(user=request.user).order_by('-created_at')
     return render(request, "my_canteen/notifications.html", {"notifs": notifs})
@@ -1747,7 +1740,7 @@ def notifications_page(request):
 @login_required
 def notification_mark_read(request, pk):
     """
-    একটা notification read করে, চাইলে link থাকলে সেদিকে redirect করবে
+    By reading a notification, if there is a link, it will redirect to it
     """
     notif = get_object_or_404(Notification, pk=pk, user=request.user)
     notif.is_read = True

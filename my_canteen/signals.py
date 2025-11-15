@@ -1,4 +1,3 @@
-# my_canteen/signals.py
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.core.mail import send_mail
@@ -7,7 +6,8 @@ from .models import Payment, Order
 
 @receiver(post_save, sender=Payment)
 def on_payment_change(sender, instance: Payment, created, **kwargs):
-    # paid হলে paid_at সেট + Order.payment_status সিঙ্ক
+    # set paid_at if paid + Order.payment_status sync
+
     if instance.status == 'paid':
         if instance.paid_at is None:
             instance.paid_at = timezone.now()
@@ -18,7 +18,8 @@ def on_payment_change(sender, instance: Payment, created, **kwargs):
             ord.payment_status = 'paid'
             ord.save(update_fields=['payment_status'])
 
-        # কনফার্মেশন ইমেইল (dev-এ কনসোলে প্রিন্ট হবে)
+        # Confirmation email (will print to console in dev)
+
         try:
             send_mail(
                 subject=f"Payment Confirmed for Order #{ord.id}",
