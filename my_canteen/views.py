@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import io
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -35,6 +35,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.template.loader import render_to_string
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.db.models.functions import TruncDate
 
 from .models import (
     MenuItem,
@@ -1585,3 +1586,31 @@ def daily_sales_report(request):
         "items_summary": items_qs,
     }
     return render(request, "my_canteen/reports/daily_sales.html", context)
+
+
+@login_required
+def spending_summary(request):
+    """
+    Logged-in user er simple spending summary.
+    - Shudhu paid, non-cancelled order dhora hobe.
+    """
+    qs = Order.objects.filter(
+        user=request.user,
+        payment_status="paid",
+    ).exclude(status="cancelled")
+
+    agg = qs.aggregate(
+        total_spent=Sum("total_price"),
+        order_count=Count("id"),
+    )
+
+    total_spent = agg["total_spent"] or 0
+    order_count = agg["order_count"] or 0
+    avg_per_order = total_spent / order_count if order_count else 0
+
+    context = {
+        "total_spent": total_spent,
+        "order_count": order_count,
+        "avg_per_order": avg_per_order,
+    }
+    return render(request, "my_canteen/spending_summary.html", context)
