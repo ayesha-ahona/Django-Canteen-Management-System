@@ -1148,30 +1148,26 @@ def address_set_default(request, pk):
     messages.success(request, "Default address updated.")
     return redirect("address_book")
 
-# ----------Order lifecycle (vendor & admin) ----------
-
-
+# ---------- Order lifecycle (vendor & admin) ----------
 @login_required
 def order_accept(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
         return redirect("dashboard")
+
     order = get_object_or_404(Order, id=order_id)
     order.status = "accepted"
-    order.save()
-
-    # Notification
-
-
-    send_notification(
-        order.user,
-        title=f"Order #{order.id} Accepted",
-        message="Vendor accepted your order. Preparing will start soon.",
-        link="/orders/",
-        email=True,
-    )
-
+    order.save(update_fields=["status"])
     messages.success(request, f"Order #{order.id} accepted.")
+
+    # 🔔 notify customer
+    send_notification(
+        user=order.user,
+        title="Order accepted",
+        message=f"Your order #{order.id} has been accepted and will be prepared soon.",
+        category="order",
+        link="/orders/",
+    )
     return redirect("dashboard")
 
 
@@ -1180,19 +1176,19 @@ def order_preparing(request, order_id):
     if not require_roles(request.user, ["vendor", "admin", "staff"]):
         messages.error(request, "Not authorized.")
         return redirect("dashboard")
+
     order = get_object_or_404(Order, id=order_id)
     order.status = "preparing"
-    order.save()
+    order.save(update_fields=["status"])
+    messages.success(request, f"Order #{order.id} set to Preparing.")
 
     send_notification(
-        order.user,
-        title=f"Order #{order.id} is being prepared",
-        message="Your food is now being prepared.",
+        user=order.user,
+        title="Order is being prepared",
+        message=f"Your order #{order.id} is now being prepared.",
+        category="order",
         link="/orders/",
-        email=True,
     )
-
-    messages.success(request, f"Order #{order.id} set to Preparing.")
     return redirect("dashboard")
 
 
@@ -1201,19 +1197,19 @@ def order_ready(request, order_id):
     if not require_roles(request.user, ["vendor", "admin", "staff"]):
         messages.error(request, "Not authorized.")
         return redirect("dashboard")
+
     order = get_object_or_404(Order, id=order_id)
     order.status = "ready"
-    order.save()
+    order.save(update_fields=["status"])
+    messages.success(request, f"Order #{order.id} marked Ready.")
 
     send_notification(
-        order.user,
-        title=f"Order #{order.id} Ready",
-        message="Your order is ready for pickup!",
+        user=order.user,
+        title="Order ready for pick-up",
+        message=f"Your order #{order.id} is ready. Please collect it from the counter.",
+        category="order",
         link="/orders/",
-        email=True,
     )
-
-    messages.success(request, f"Order #{order.id} marked Ready.")
     return redirect("dashboard")
 
 
@@ -1222,19 +1218,19 @@ def order_delivered(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
         return redirect("dashboard")
+
     order = get_object_or_404(Order, id=order_id)
     order.status = "delivered"
-    order.save()
+    order.save(update_fields=["status"])
+    messages.success(request, f"Order #{order.id} marked Delivered.")
 
     send_notification(
-        order.user,
-        title=f"Order #{order.id} Delivered",
-        message="Your order has been delivered. Enjoy your meal!",
+        user=order.user,
+        title="Order delivered",
+        message=f"Your order #{order.id} has been delivered.",
+        category="order",
         link="/orders/",
-        email=True,
     )
-
-    messages.success(request, f"Order #{order.id} marked Delivered.")
     return redirect("dashboard")
 
 
@@ -1243,22 +1239,24 @@ def order_completed(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
         return redirect("dashboard")
+
     order = get_object_or_404(Order, id=order_id)
+
     if order.payment_status != "paid":
         messages.warning(request, "Mark as Paid before completing.")
         return redirect("dashboard")
+
     order.status = "completed"
-    order.save()
+    order.save(update_fields=["status"])
+    messages.success(request, f"Order #{order.id} Completed.")
 
     send_notification(
-        order.user,
-        title=f"Order #{order.id} Completed",
-        message="Your order is now marked as completed.",
+        user=order.user,
+        title="Order completed",
+        message=f"Thank you! Your order #{order.id} has been completed.",
+        category="order",
         link="/orders/",
-        email=True,
     )
-
-    messages.success(request, f"Order #{order.id} Completed.")
     return redirect("dashboard")
 
 
@@ -1267,19 +1265,19 @@ def order_cancel(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
         return redirect("dashboard")
+
     order = get_object_or_404(Order, id=order_id)
     order.status = "cancelled"
-    order.save()
+    order.save(update_fields=["status"])
+    messages.info(request, f"Order #{order.id} Cancelled.")
 
     send_notification(
-        order.user,
-        title=f"Order #{order.id} Cancelled by vendor",
-        message="Your order has been cancelled by canteen staff.",
+        user=order.user,
+        title="Order cancelled",
+        message=f"Your order #{order.id} has been cancelled by canteen.",
+        category="order",
         link="/orders/",
-        email=True,
     )
-
-    messages.info(request, f"Order #{order.id} Cancelled.")
     return redirect("dashboard")
 
 
@@ -1288,19 +1286,19 @@ def order_mark_paid(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
         return redirect("dashboard")
+
     order = get_object_or_404(Order, id=order_id)
     order.payment_status = "paid"
-    order.save()
+    order.save(update_fields=["payment_status"])
+    messages.success(request, f"Order #{order.id} marked as PAID.")
 
     send_notification(
-        order.user,
-        title=f"Payment received for Order #{order.id}",
-        message="Your payment has been marked as paid.",
+        user=order.user,
+        title="Payment received",
+        message=f"Payment for order #{order.id} has been recorded.",
+        category="payment",
         link="/orders/",
-        email=True,
     )
-
-    messages.success(request, f"Order #{order.id} marked as PAID.")
     return redirect("dashboard")
 
 
