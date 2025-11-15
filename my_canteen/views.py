@@ -1,37 +1,29 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import User
-from django.http import HttpResponse, HttpResponseForbidden
-from django.db.models import Q, Avg, Count
-from django.contrib import messages
 from django.http import (
     HttpResponseForbidden,
     HttpResponseRedirect,
     JsonResponse,
     HttpResponse,
 )
-import io
+from django.db.models import Q, Avg, Count
+from django.contrib import messages
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
 
-# Pdf
-
-
+# PDF / Invoice
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 
 # Notifications helper
-
-
 from .utils import send_notification
 
 # ✅ Email verification imports
-
-
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
@@ -40,8 +32,8 @@ from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.core.paginator import Paginator
-from django.db.models import Count as CountAgg  
-from django.db.models import Count   
+from django.db.models import Count as CountAgg
+from django.db.models import Count
 
 from .models import (
     MenuItem,
@@ -53,53 +45,33 @@ from .models import (
     Payment,
     Favorite,
     Notification,
-    Address
+    Address,
 )
-from .forms import CustomSignupForm, ReviewForm, CheckoutPaymentForm, MenuItemForm, AddressForm
+from .forms import (
+    CustomSignupForm,
+    ReviewForm,
+    CheckoutPaymentForm,
+    MenuItemForm,
+    AddressForm,
+)
 
-# ----------COUPON /PROMO CODES (simple fixed list) ----------
-
-
+# ---------- COUPON / PROMO CODES (simple fixed list) ----------
 COUPON_CODES = {
-    "FOOD10": 10,      # 10% off
-
-
-    "WELCOME20": 20,   # 20% off
-
-
-    "STUDENT5": 5,     # 5% off
-
-
-    "FESTIVE15": 15,   # 15% off
-
-
-    "VIP25": 25,       # 25% off
-
-
-    "HAPPY30": 30,     # 30% off
-
-
-    "SAVE30": 30,      # 30% off
-
-
-    "MEAL40": 40,      # 40% off
-
-
-    "BUDGET35": 35,    # 35% off
-
-
-    "SNACK15": 15,     # 15% off
-
-
-    "LUNCH20": 20,     # 20% off
-
-
+    "FOOD10": 10,
+    "WELCOME20": 20,
+    "STUDENT5": 5,
+    "FESTIVE15": 15,
+    "VIP25": 25,
+    "HAPPY30": 30,
+    "SAVE30": 30,
+    "MEAL40": 40,
+    "BUDGET35": 35,
+    "SNACK15": 15,
+    "LUNCH20": 20,
 }
 
 
 # ========== Email Verification Token ==========
-
-
 class EmailVerificationTokenGenerator(PasswordResetTokenGenerator):
     def _make_hash_value(self, user, timestamp):
         profile = getattr(user, "userprofile", None)
@@ -111,8 +83,6 @@ email_token_generator = EmailVerificationTokenGenerator()
 
 
 # ========== Send Verification Email ==========
-
-
 def send_verification_email(request, user):
     uid = urlsafe_base64_encode(force_bytes(user.pk))
     token = email_token_generator.make_token(user)
@@ -129,8 +99,6 @@ def send_verification_email(request, user):
 
 
 # ========== Custom Login View ==========
-
-
 class CustomLoginView(auth_views.LoginView):
     template_name = "my_canteen/login.html"
 
@@ -143,8 +111,6 @@ class CustomLoginView(auth_views.LoginView):
 
 
 # ========== Signup ==========
-
-
 def signup_page(request):
     if request.method == "POST":
         form = CustomSignupForm(request.POST)
@@ -157,7 +123,7 @@ def signup_page(request):
             role = form.cleaned_data.get("role", "guest")
             phone = form.cleaned_data.get("phone")
 
-        
+            # প্রথম user হলে তাকে admin বানাবো
             if User.objects.count() == 1:
                 role = "admin"
 
@@ -169,8 +135,6 @@ def signup_page(request):
             profile.save()
 
             # ✅ Send verification email
-
-
             send_verification_email(request, user)
             messages.success(
                 request,
@@ -184,8 +148,6 @@ def signup_page(request):
 
 
 # ========== Verify Email ==========
-
-
 def verify_email(request, uidb64, token):
     try:
         uid = force_str(urlsafe_base64_decode(uidb64))
@@ -206,8 +168,6 @@ def verify_email(request, uidb64, token):
 
 
 # ========== Resend Verification ==========
-
-
 @login_required
 def resend_verification(request):
     profile = request.user.userprofile
@@ -220,9 +180,7 @@ def resend_verification(request):
     return redirect("login")
 
 
-# ----------Helpers ----------
-
-
+# ---------- Helpers ----------
 def get_role(user):
     """If UserProfile does not exist, it will return 'guest'."""
     try:
@@ -236,7 +194,6 @@ def get_effective_role(real_role: str) -> str:
     In the UI/heading, we will show the real_role, but for permissions/data, we use effective_role.
     - admin -> vendor permissions
     - vendor -> admin permissions
-    - others (student/faculty/staff/guest) -> as before
     """
     if real_role == "admin":
         return "vendor"
@@ -251,8 +208,9 @@ def require_roles(user, allowed):
 
 
 def can_user_cancel(order, user) -> bool:
-    "End-user smart cancel: Students, faculty, and guests can cancel their orders until preparation begins."
-
+    """End-user smart cancel: Students, faculty, and guests can cancel
+    their orders until preparation begins.
+    """
     role = get_role(user)
     if role not in {"student", "faculty", "guest"}:
         return False
@@ -261,10 +219,12 @@ def can_user_cancel(order, user) -> bool:
     return order.status in {"pending", "accepted"}
 
 
+def _dashboard_live_orders_redirect():
+    """Helper: redirect to dashboard live orders section so scroll top এ না যায়"""
+    return HttpResponseRedirect(reverse("dashboard") + "#live-orders")
+
+
 # ========= AI Recommendation Helpers =========
-
-
-
 def get_user_top_categories(user, limit=3):
     """
     User has eaten more food from any category
@@ -274,18 +234,12 @@ def get_user_top_categories(user, limit=3):
         return Category.objects.none()
 
     qs = (
-        OrderItem.objects
-        .filter(
+        OrderItem.objects.filter(
             order__user=user,
             order_status_in=["delivered", "completed"],
         )
-        # If there is no category, we omit it
-
-
         .exclude(item_category_isnull=True)
-        .values("item__category")          # consider category id
-
-
+        .values("item__category")
         .annotate(cnt=Count("id"))
         .order_by("-cnt")
     )
@@ -294,130 +248,94 @@ def get_user_top_categories(user, limit=3):
     return Category.objects.filter(id__in=cat_ids)
 
 
-
 def get_recommended_items(user, base_item=None, limit=6):
     """
-    -If base_item → similar category + popular
-    -If not → user's top categories
-    -If new user → popular items
+    - If base_item → similar category + popular
+    - If not → user's top categories
+    - If new user → popular items
     """
     qs = MenuItem.objects.filter(is_active=True)
 
-    # 1) If base_item is similar category
-
-
     if base_item and base_item.category:
         qs = qs.filter(category=base_item.category).exclude(id=base_item.id)
-
-    # 2) logged-in user → top categories
-
-
     elif user.is_authenticated:
         top_cats = get_user_top_categories(user)
         if top_cats:
             qs = qs.filter(category__in=top_cats)
 
-    # 3) fallback: সব active items
-
-
-
     qs = qs.order_by("-is_popular", "name")
-
     return qs[:limit]
 
 
-# ----------Home ----------
-
-
+# ---------- Home ----------
 def home(request):
     popular_items = MenuItem.objects.filter(is_popular=True, is_active=True)[:6]
     return render(request, "my_canteen/home.html", {"popular_items": popular_items})
 
 
-# ----------Menu ----------
-
-
+# ---------- Menu ----------
 def menu_page(request):
     # query params
-
-
     q = request.GET.get("q", "").strip()
     min_price = request.GET.get("min_price") or ""
     max_price = request.GET.get("max_price") or ""
     sort = request.GET.get("sort") or ""
     active_cat = request.GET.get("cat") or ""  # keep as string for template
 
-
-
     # base queryset
-
-
     items = MenuItem.objects.filter(is_active=True)
 
     # category filter
-
-
     if active_cat:
         try:
             items = items.filter(category_id=int(active_cat))
         except ValueError:
             active_cat = ""  # invalid cat id -> treat as "All"
 
-
-
-    # search filter ✅ There were two typos here
-
-
+    # search filter
     if q:
         items = items.filter(
             Q(name_icontains=q) | Q(description_icontains=q)
         )
 
     # price range
-
-
     if min_price:
         items = items.filter(price__gte=min_price)
     if max_price:
         items = items.filter(price__lte=max_price)
 
-    # Sorting
-
-
+    # sorting
     if sort == "price_asc":
         items = items.order_by("price")
     elif sort == "price_desc":
         items = items.order_by("-price")
+    elif sort == "rating_desc":
+        items = items.order_by("-rating_avg", "-is_popular", "name")
     else:
         items = items.order_by("-is_popular", "name")
 
     # all categories for chips
-
-
     categories = Category.objects.all().order_by("name")
 
-    # ✅ Simple recommendation: only popular items
-
-
+    # Simple recommendation: popular items
     recommended_items = MenuItem.objects.filter(
         is_active=True, is_popular=True
     )[:6]
 
     context = {
         "items": items,
-            "categories": categories,
-            "active_cat": active_cat,
-            "q": q,
-            "min_price": min_price,
-            "max_price": max_price,
-            "sort": sort,
-            "recommended_items": recommended_items,
+        "categories": categories,
+        "active_cat": active_cat,
+        "q": q,
+        "min_price": min_price,
+        "max_price": max_price,
+        "sort": sort,
+        "recommended": recommended_items,
     }
     return render(request, "my_canteen/menu.html", context)
 
-# ----------Item Detail + Reviews ----------
 
-
+# ---------- Item Detail + Reviews ----------
 def item_detail(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
 
@@ -460,9 +378,6 @@ def item_detail(request, item_id):
 @login_required
 def submit_review(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id, is_active=True)
-
-    # Security check again
-
 
     purchased = OrderItem.objects.filter(
         order__user=request.user,
@@ -524,9 +439,7 @@ def delete_review(request, item_id):
     return HttpResponseForbidden("Invalid request")
 
 
-# ----------Cart ----------
-
-
+# ---------- Cart ----------
 @login_required
 def add_to_cart(request, item_id):
     cart = request.session.get("cart", {})
@@ -534,7 +447,6 @@ def add_to_cart(request, item_id):
     request.session["cart"] = cart
     messages.success(request, "Added to cart ✔")
 
-    # redirect back to the same place
     referer = request.META.get("HTTP_REFERER")
     if referer:
         return redirect(referer)
@@ -605,9 +517,6 @@ def view_cart(request):
     total = 0
     item_ids = []
 
-    # Original cart items + total calculation
-
-
     for item_id, qty in cart.items():
         try:
             item = MenuItem.objects.get(id=item_id, is_active=True)
@@ -619,14 +528,9 @@ def view_cart(request):
         total += subtotal
         item_ids.append(item.id)
 
-    # ----------SMART EXTRA ITEMS ----------
-
-
+    # SMART EXTRA ITEMS
     suggested_items = []
-    if items:  # I will suggest extra only if there is something in the cart
-        # Find out the categories of the items in the cart
-
-
+    if items:
         cat_ids = {
             entry["item"].category_id
             for entry in items
@@ -634,23 +538,13 @@ def view_cart(request):
         }
 
         qs = MenuItem.objects.filter(is_active=True)
-
-        # Popular items from those categories
-
-
         if cat_ids:
             qs = qs.filter(category_id__in=cat_ids)
-
-        # Except those already in the cart
-
-
         if item_ids:
             qs = qs.exclude(id__in=item_ids)
 
         suggested_items = list(
-            qs.order_by("-is_popular", "name")[:4]  # Maximum 4 hours extra
-
-
+            qs.order_by("-is_popular", "name")[:4]
         )
 
     context = {
@@ -661,18 +555,13 @@ def view_cart(request):
     return render(request, "my_canteen/cart.html", context)
 
 
-# ----------Checkout + Payment ----------
-
-
+# ---------- Checkout + Payment ----------
 @login_required
 def checkout(request):
     cart = request.session.get("cart", {})
     if not cart:
         messages.error(request, "Your cart is empty!")
         return redirect("menu")
-
-    # ---Build cart items list + subtotal ---
-
 
     cart_items = []
     total = 0
@@ -682,20 +571,13 @@ def checkout(request):
         cart_items.append({"item": item, "qty": qty, "subtotal": subtotal})
         total += subtotal
 
-    # ✅ Address book: current user-er saved addresses
-
-
-    addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
-
-    # default values
-
+    addresses = Address.objects.filter(user=request.user).order_by(
+        "-is_default", "-id"
+    )
 
     coupon_code = ""
     discount_amount = 0
     grand_total = total
-
-    # Extra helper variables for forms
-
 
     selected_address_id = None
     address_text = ""
@@ -703,14 +585,8 @@ def checkout(request):
     if request.method == "POST":
         form = CheckoutPaymentForm(request.POST)
 
-        # -----address form data niye nei -----
-
-
         selected_address_id = request.POST.get("address_id") or None
         address_text = request.POST.get("address_text", "").strip()
-
-        # ----------COUPON ----------
-
 
         coupon_code = request.POST.get("coupon_code", "").strip().upper()
         discount_percent = COUPON_CODES.get(coupon_code, 0)
@@ -720,20 +596,14 @@ def checkout(request):
         else:
             grand_total = total
 
-        # Just applying the coupon? (Apply button e name="apply_coupon")
-
-
         if "apply_coupon" in request.POST:
             if coupon_code and not discount_percent:
                 messages.error(request, "Invalid or expired coupon code.")
             elif discount_percent:
                 messages.success(
                     request,
-                    f"Coupon {coupon_code} applied ({discount_percent}% off)."
+                    f"Coupon {coupon_code} applied ({discount_percent}% off).",
                 )
-            # Just page re-render without creating order
-
-
             return render(
                 request,
                 "my_canteen/checkout.html",
@@ -750,19 +620,10 @@ def checkout(request):
                 },
             )
 
-        # ----------PLACE ORDER & PAY ----------
-
-
         if form.is_valid():
             method = form.cleaned_data["payment_method"]
 
-            # 🔹 address stirring stirring users?
-
-
             address_str = "Default Address"
-
-            # 1) jodi saved address select kore
-
 
             if selected_address_id:
                 try:
@@ -776,15 +637,8 @@ def checkout(request):
                     )
                 except Address.DoesNotExist:
                     pass
-
-            # 2) If you have a one-time address written by yourself
-
-
             elif address_text:
                 address_str = address_text
-
-            # Order create
-
 
             order = Order.objects.create(
                 user=request.user,
@@ -794,9 +648,6 @@ def checkout(request):
                 payment_status="unpaid",
                 payment_method=method,
             )
-
-            # Order items + reduce stock
-
 
             for item_id, qty in cart.items():
                 item = get_object_or_404(MenuItem, id=item_id)
@@ -809,18 +660,12 @@ def checkout(request):
                     unit_price=item.price,
                 )
 
-            # Payment row
-
-
             payment = Payment.objects.create(
                 order=order,
                 method=method,
                 amount=order.total_price,
                 status="pending",
             )
-
-            # All ore demos: cash, mock_card, develop, nagad
-
 
             if method in ["cash", "mock_card", "bkash", "nagad"]:
                 payment.status = "paid"
@@ -833,13 +678,7 @@ def checkout(request):
                 order.payment_status = "paid"
                 order.save()
 
-                # cart clear
-
-
                 request.session["cart"] = {}
-
-                # Different messages
-
 
                 msg_map = {
                     "cash": "Cash payment order placed successfully!",
@@ -849,31 +688,15 @@ def checkout(request):
                 }
                 messages.success(
                     request,
-                    msg_map.get(method, "Order placed successfully!")
+                    msg_map.get(method, "Order placed successfully!"),
                 )
                 return redirect("payment_success")
 
-            # future: stripe /sslcommerz handle here
-
-
             messages.info(request, "Selected gateway is not ready yet.")
             return redirect("payment_failed")
-
     else:
-        # GET request
-
-
         form = CheckoutPaymentForm()
-        grand_total = total  # no coupon yet
-
-
-
-        # If you want to select default address, you can give logic here
-
-
-
-    # ---Render page (default /GET /invalid form) ---
-
+        grand_total = total
 
     return render(
         request,
@@ -890,6 +713,7 @@ def checkout(request):
             "address_text": address_text,
         },
     )
+
 
 def payment_start(request, order_id):
     order = get_object_or_404(Order, id=order_id, user=request.user)
@@ -942,17 +766,11 @@ def payment_failed(request):
 
 @csrf_exempt
 def stripe_webhook(request):
-    # TODO: verify signature & mark paid
-
-
     return HttpResponse(status=200)
 
 
 @csrf_exempt
 def sslcommerz_ipn(request):
-    # TODO: verify IPN & update payment
-
-
     return HttpResponse(status=200)
 
 
@@ -967,9 +785,7 @@ def order_status_api(request, order_id):
     return JsonResponse(data)
 
 
-# ----------Orders list page ----------
-
-
+# ---------- Orders list page ----------
 @login_required
 def orders_page(request):
     profile = UserProfile.objects.select_related("user").get(user=request.user)
@@ -984,9 +800,6 @@ def orders_page(request):
     else:
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
 
-    # smart cancel: Orders that can be canceled by the end-user
-
-
     cancelable_ids = {o.id for o in orders if can_user_cancel(o, request.user)}
 
     return render(
@@ -996,9 +809,7 @@ def orders_page(request):
     )
 
 
-# ----------Static pages + anchor redirects ----------
-
-
+# ---------- Static pages + anchor redirects ----------
 def about_page(request):
     return render(request, "my_canteen/about.html")
 
@@ -1027,7 +838,6 @@ def dashboard(request):
     real_role = profile.role
     effective_role = get_effective_role(real_role)
 
-    # ডেটা লোডিং effective_role দিয়ে (swap only for permissions/data)
     if effective_role in ["admin", "vendor"]:
         orders = Order.objects.all().order_by("-created_at")
         items = MenuItem.objects.all()
@@ -1040,9 +850,8 @@ def dashboard(request):
         orders = Order.objects.filter(user=request.user).order_by("-created_at")
         items = None
 
-    # হেডিং real_role দিয়ে (UI)
     title_map = {
-        "admin": "🛠️ Admin Dashboard",
+        "admin": "🛠 Admin Dashboard",
         "vendor": "🏪 Vendor Dashboard",
         "staff": "👨‍🍳 Staff Dashboard",
         "student": "🎓 Student Dashboard",
@@ -1051,7 +860,6 @@ def dashboard(request):
     }
     dashboard_title = title_map.get(real_role, "Dashboard")
 
-    # ✅ এখন template real_role দিয়ে নেব
     template_name = f"my_canteen/dashboard/{real_role}.html"
 
     ctx = {
@@ -1065,9 +873,7 @@ def dashboard(request):
     return render(request, template_name, ctx)
 
 
-# ----------Optional vendor-only view (unused) ----------
-
-
+# ---------- Optional vendor-only view (unused) ----------
 @login_required
 def vendor_dashboard(request):
     if get_role(request.user) != "vendor":
@@ -1076,9 +882,7 @@ def vendor_dashboard(request):
     return render(request, "my_canteen/dashboard/superadmin.html")
 
 
-# ----------Profile /Settings ----------
-
-
+# ---------- Profile / Settings ----------
 @login_required
 def profile_page(request):
     profile = UserProfile.objects.get(user=request.user)
@@ -1099,14 +903,10 @@ def settings_page(request):
         return redirect("settings")
     return render(request, "my_canteen/settings.html", {"profile": profile})
 
-# ----------Address Book ----------
 
-
+# ---------- Address Book ----------
 @login_required
 def address_book(request):
-    """
-    User নিজে তাঁর address গুলো manage করবে (list + add new).
-    """
     addresses = Address.objects.filter(user=request.user).order_by(
         "-is_default", "-created_at"
     )
@@ -1148,34 +948,42 @@ def address_set_default(request, pk):
     messages.success(request, "Default address updated.")
     return redirect("address_book")
 
+
+@login_required
+def address_list(request):
+    addresses = Address.objects.filter(user=request.user).order_by(
+        "-is_default", "-id"
+    )
+    return render(request, "my_canteen/address_list.html", {"addresses": addresses})
+
+
 # ---------- Order lifecycle (vendor & admin) ----------
 @login_required
 def order_accept(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect("dashboard")
+        return _dashboard_live_orders_redirect()
 
     order = get_object_or_404(Order, id=order_id)
     order.status = "accepted"
     order.save(update_fields=["status"])
     messages.success(request, f"Order #{order.id} accepted.")
 
-    # 🔔 notify customer
     send_notification(
         user=order.user,
         title="Order accepted",
         message=f"Your order #{order.id} has been accepted and will be prepared soon.",
         category="order",
-        link="/orders/",
+        link=reverse("orders"),
     )
-    return redirect("dashboard")
+    return _dashboard_live_orders_redirect()
 
 
 @login_required
 def order_preparing(request, order_id):
     if not require_roles(request.user, ["vendor", "admin", "staff"]):
         messages.error(request, "Not authorized.")
-        return redirect("dashboard")
+        return _dashboard_live_orders_redirect()
 
     order = get_object_or_404(Order, id=order_id)
     order.status = "preparing"
@@ -1187,16 +995,16 @@ def order_preparing(request, order_id):
         title="Order is being prepared",
         message=f"Your order #{order.id} is now being prepared.",
         category="order",
-        link="/orders/",
+        link=reverse("orders"),
     )
-    return redirect("dashboard")
+    return _dashboard_live_orders_redirect()
 
 
 @login_required
 def order_ready(request, order_id):
     if not require_roles(request.user, ["vendor", "admin", "staff"]):
         messages.error(request, "Not authorized.")
-        return redirect("dashboard")
+        return _dashboard_live_orders_redirect()
 
     order = get_object_or_404(Order, id=order_id)
     order.status = "ready"
@@ -1208,16 +1016,16 @@ def order_ready(request, order_id):
         title="Order ready for pick-up",
         message=f"Your order #{order.id} is ready. Please collect it from the counter.",
         category="order",
-        link="/orders/",
+        link=reverse("orders"),
     )
-    return redirect("dashboard")
+    return _dashboard_live_orders_redirect()
 
 
 @login_required
 def order_delivered(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect("dashboard")
+        return _dashboard_live_orders_redirect()
 
     order = get_object_or_404(Order, id=order_id)
     order.status = "delivered"
@@ -1229,22 +1037,22 @@ def order_delivered(request, order_id):
         title="Order delivered",
         message=f"Your order #{order.id} has been delivered.",
         category="order",
-        link="/orders/",
+        link=reverse("orders"),
     )
-    return redirect("dashboard")
+    return _dashboard_live_orders_redirect()
 
 
 @login_required
 def order_completed(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect("dashboard")
+        return _dashboard_live_orders_redirect()
 
     order = get_object_or_404(Order, id=order_id)
 
     if order.payment_status != "paid":
         messages.warning(request, "Mark as Paid before completing.")
-        return redirect("dashboard")
+        return _dashboard_live_orders_redirect()
 
     order.status = "completed"
     order.save(update_fields=["status"])
@@ -1255,16 +1063,16 @@ def order_completed(request, order_id):
         title="Order completed",
         message=f"Thank you! Your order #{order.id} has been completed.",
         category="order",
-        link="/orders/",
+        link=reverse("orders"),
     )
-    return redirect("dashboard")
+    return _dashboard_live_orders_redirect()
 
 
 @login_required
 def order_cancel(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect("dashboard")
+        return _dashboard_live_orders_redirect()
 
     order = get_object_or_404(Order, id=order_id)
     order.status = "cancelled"
@@ -1276,16 +1084,16 @@ def order_cancel(request, order_id):
         title="Order cancelled",
         message=f"Your order #{order.id} has been cancelled by canteen.",
         category="order",
-        link="/orders/",
+        link=reverse("orders"),
     )
-    return redirect("dashboard")
+    return _dashboard_live_orders_redirect()
 
 
 @login_required
 def order_mark_paid(request, order_id):
     if not require_roles(request.user, ["vendor", "admin"]):
         messages.error(request, "Not authorized.")
-        return redirect("dashboard")
+        return _dashboard_live_orders_redirect()
 
     order = get_object_or_404(Order, id=order_id)
     order.payment_status = "paid"
@@ -1297,14 +1105,12 @@ def order_mark_paid(request, order_id):
         title="Payment received",
         message=f"Payment for order #{order.id} has been recorded.",
         category="payment",
-        link="/orders/",
+        link=reverse("orders"),
     )
-    return redirect("dashboard")
+    return _dashboard_live_orders_redirect()
 
 
-# ----------End-user Smart Cancel ----------
-
-
+# ---------- End-user Smart Cancel ----------
 @login_required
 def user_order_cancel(request, order_id):
     """
@@ -1312,41 +1118,30 @@ def user_order_cancel(request, order_id):
     """
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    # Check whether it can be cancelled
-
-
     if not can_user_cancel(order, request.user):
         messages.error(request, "You can no longer cancel this order.")
         return redirect("orders")
-
-    # Return stock
-
 
     for oi in OrderItem.objects.filter(order=order).select_related("item"):
         oi.item.stock += oi.quantity
         oi.item.save(update_fields=["stock"])
 
-    # Order status update
-
-
     order.status = "cancelled"
     order.save(update_fields=["status"])
 
     send_notification(
-        request.user,
-        title=f"Order #{order.id} Cancelled",
+        user=request.user,
+        title=f"Order #{order.id} cancelled",
         message="Your order has been cancelled successfully.",
-        link="/orders/",
-        email=True,
+        category="order",
+        link=reverse("orders"),
     )
 
     messages.success(request, f"Order #{order.id} cancelled successfully.")
     return redirect("orders")
 
 
-# ----------Reorder Previous Order ----------
-
-
+# ---------- Reorder Previous Order ----------
 @login_required
 def reorder_order(request, order_id):
     """
@@ -1355,33 +1150,17 @@ def reorder_order(request, order_id):
     """
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
-    # I will allow reorder only from delivered /completed order
-
-
     if order.status not in ["delivered", "completed"]:
         messages.error(request, "You can reorder only delivered or completed orders.")
         return redirect("orders")
 
-    # current cart
-
-
     cart = request.session.get("cart", {})
     added_any = False
 
-    # View all items in the order
-
-
     for oi in order.orderitem_set.select_related("item"):
         item = oi.item
-
-        # item inactive or out of stock → skip
-
-
         if not item.is_active or item.stock <= 0:
             continue
-
-        # It will add as much as it was in the previous order, if it is in stock
-
 
         qty = min(oi.quantity, item.stock)
         if qty <= 0:
@@ -1407,9 +1186,7 @@ def reorder_order(request, order_id):
         return redirect("orders")
 
 
-# ----------Vendor CRUD for Menu Items ----------
-
-
+# ---------- Vendor CRUD for Menu Items ----------
 @login_required
 def vendor_item_list(request):
     if not require_roles(request.user, ["vendor", "admin"]):
@@ -1505,9 +1282,7 @@ def vendor_item_toggle_active(request, pk):
     return redirect("vendor_item_list")
 
 
-# ----------Favorites ----------
-
-
+# ---------- Favorites ----------
 @login_required
 def toggle_favorite(request, item_id):
     item = get_object_or_404(MenuItem, id=item_id)
@@ -1531,14 +1306,9 @@ def favorites_page(request):
     )
 
 
-# ----------PDF Invoice Generation ----------
-
-
+# ---------- PDF Invoice Generation ----------
 @login_required
 def order_invoice_pdf(request, order_id):
-    # No one can download other than your own order
-
-
     order = get_object_or_404(Order, id=order_id, user=request.user)
 
     buffer = io.BytesIO()
@@ -1546,9 +1316,7 @@ def order_invoice_pdf(request, order_id):
     width, height = A4
     margin = 20 * mm
 
-    # ========== HEADER BAND ==========
-
-
+    # HEADER
     header_h = 25 * mm
     c.setFillColor(colors.HexColor("#c62828"))
     c.rect(0, height - header_h, width, header_h, fill=1, stroke=0)
@@ -1560,13 +1328,7 @@ def order_invoice_pdf(request, order_id):
     c.setFont("Helvetica", 11)
     c.drawString(margin, height - header_h + 4 * mm, "Order Invoice")
 
-    # ========== ORDER + CUSTOMER INFO ==========
-
-
     c.setFillColor(colors.black)
-
-    # Left: order info
-
 
     y_left = height - header_h - 15 * mm
     c.setFont("Helvetica-Bold", 12)
@@ -1579,9 +1341,6 @@ def order_invoice_pdf(request, order_id):
     c.drawString(
         margin, y_left, f"Date: {order.created_at.strftime('%Y-%m-%d %H:%M')}"
     )
-
-    # Right: customer info
-
 
     info_x = width / 2
     y_right = height - header_h - 15 * mm
@@ -1597,17 +1356,12 @@ def order_invoice_pdf(request, order_id):
     y_right -= 14
     c.drawString(info_x, y_right, f"Status: {order.status.title()}")
 
-    # Separator line
-
-
     y = min(y_left, y_right) - 22
     c.setStrokeColor(colors.lightgrey)
     c.setLineWidth(0.8)
     c.line(margin, y, width - margin, y)
 
-    # ========== ITEMS TABLE ==========
-
-
+    # ITEMS TABLE
     y -= 20
     c.setFont("Helvetica-Bold", 12)
     c.setFillColor(colors.black)
@@ -1619,9 +1373,6 @@ def order_invoice_pdf(request, order_id):
     col_qty = margin + 72 * mm
     col_price = margin + 97 * mm
     col_subtotal = margin + 127 * mm
-
-    # table header background
-
 
     c.setFillColor(colors.whitesmoke)
     c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
@@ -1637,24 +1388,15 @@ def order_invoice_pdf(request, order_id):
     c.setFont("Helvetica", 10)
 
     for oi in order.orderitem_set.all():
-        # If a new page is needed
-
-
         if y < 40 * mm:
             c.showPage()
             width, height = A4
             margin = 20 * mm
             y = height - margin
 
-            # Short title on new page
-
-
             c.setFont("Helvetica-Bold", 12)
             c.drawString(margin, y, "Items (contd.)")
             y -= 18
-
-            # Draw the header row again
-
 
             c.setFillColor(colors.whitesmoke)
             c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
@@ -1666,9 +1408,6 @@ def order_invoice_pdf(request, order_id):
             c.drawString(col_subtotal + 4, y + 4, "Subtotal")
             y -= row_h
             c.setFont("Helvetica", 10)
-
-        # data row
-
 
         c.setFillColor(colors.white)
         c.rect(margin, y, width - 2 * margin, row_h, fill=1, stroke=0)
@@ -1683,9 +1422,7 @@ def order_invoice_pdf(request, order_id):
 
         y -= row_h
 
-    # ========== TOTAL BOX ==========
-
-
+    # TOTAL BOX
     y -= 25
     c.setStrokeColor(colors.HexColor("#c62828"))
     c.setLineWidth(1.2)
@@ -1705,9 +1442,7 @@ def order_invoice_pdf(request, order_id):
         width - margin - 6, y + 2, f"{order.total_price:.2f} Tk"
     )
 
-    # ========== FOOTER ==========
-
-
+    # FOOTER
     footer_y = 25 * mm
     c.setStrokeColor(colors.lightgrey)
     c.setLineWidth(0.6)
@@ -1732,39 +1467,21 @@ def order_invoice_pdf(request, order_id):
     response["Content-Disposition"] = f'attachment; filename="{filename}"'
     return response
 
-# ----------Notifications (In-App) ----------
 
-
+# ---------- Notifications (In-App) ----------
 @login_required
 def notifications_page(request):
-    """
-    All your notifications will show in list form (newest one above).
-    """
-    notifs = Notification.objects.filter(user=request.user).order_by('-created_at')
+    notifs = Notification.objects.filter(user=request.user).order_by("-created_at")
     return render(request, "my_canteen/notifications.html", {"notifs": notifs})
 
 
 @login_required
 def notification_mark_read(request, pk):
-    """
-    By reading a notification, if there is a link, it will redirect to it
-    """
     notif = get_object_or_404(Notification, pk=pk, user=request.user)
     notif.is_read = True
     notif.save(update_fields=["is_read"])
-
-    # If there is a link in the notification → send it there
-
 
     if notif.link:
         return redirect(notif.link)
 
     return redirect("notifications")
-
-# ----------ADDRESS BOOK ----------
-
-
-@login_required
-def address_list(request):
-    addresses = Address.objects.filter(user=request.user).order_by("-is_default", "-id")
-    return render(request, "my_canteen/address_list.html", {"addresses": addresses})
