@@ -13,7 +13,7 @@
     <em>(before preparing)</em> and reorder your favourite meals in one click. 🔁
   </p>
 
-  <!-- ফ্ল্যাশ মেসেজ দেখানোর জায়গা -->
+  <!-- Flash message display area -->
   {% if messages %}
     <div style="margin-bottom:16px;">
       {% for message in messages %}
@@ -88,7 +88,7 @@
                   📄 Invoice (PDF)
                 </a>
 
-                <!-- ❌ Cancel / Disabled Cancel -->
+                <!-- ❌ Cancel /Disabled Cancel -->
                 {% if order.id in cancelable_ids %}
                   <form action="{% url 'user_order_cancel' order.id %}" method="post" style="display:inline;">
                     {% csrf_token %}

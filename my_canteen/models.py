@@ -8,6 +8,7 @@ from django.dispatch import receiver
 # ---------------------------
 # User & Roles
 # ---------------------------
+
 class UserProfile(models.Model):
     ROLE_CHOICES = [
         ('admin', 'Admin / Manager'),
@@ -20,7 +21,8 @@ class UserProfile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='guest')
     phone = models.CharField(max_length=15, blank=True, null=True)
-    email_verified = models.BooleanField(default=False)  # ✅ নতুন ফিল্ড
+    email_verified = models.BooleanField(default=False)  # ✅ New field
+
 
     def __str__(self):
         return f"{self.user.username} ({self.role})"
@@ -32,14 +34,16 @@ class UserProfile(models.Model):
 
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
-    # নতুন ইউজার হলে default guest প্রোফাইল
+    # Default guest profile if new user
+
     if created:
         UserProfile.objects.create(user=instance, role='guest')
 
 
 @receiver(post_save, sender=User)
 def save_user_profile(sender, instance, **kwargs):
-    # fallback: profile না থাকলে তৈরি কর
+    # fallback: Create profile if not present
+
     try:
         instance.userprofile.save()
     except UserProfile.DoesNotExist:
@@ -49,6 +53,7 @@ def save_user_profile(sender, instance, **kwargs):
 # ---------------------------
 # Menu & Catalog
 # ---------------------------
+
 class Category(models.Model):
     name = models.CharField(max_length=50)
 
@@ -67,6 +72,7 @@ class MenuItem(models.Model):
     is_popular = models.BooleanField(default=False)
 
     # ✅ Cached rating fields (fast listing/sorting/filtering)
+
     rating_avg = models.FloatField(default=0)
     rating_count = models.PositiveIntegerField(default=0)
 
@@ -77,6 +83,7 @@ class MenuItem(models.Model):
 # ---------------------------
 # Orders
 # ---------------------------
+
 class Order(models.Model):
     STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -114,6 +121,7 @@ class Order(models.Model):
 # ---------------------------
 # Payment (moved out of Order)
 # ---------------------------
+
 class Payment(models.Model):
     METHOD_CHOICES = [
         ('cash', 'Cash'),
@@ -154,15 +162,20 @@ class OrderItem(models.Model):
 # ---------------------------
 # Reviews & Feedback
 # ---------------------------
+
 class Review(models.Model):
     RATING_CHOICES = [(i, str(i)) for i in range(1, 6)]  # 1..5 stars
+
 
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     item = models.ForeignKey(MenuItem, on_delete=models.CASCADE, related_name='reviews')
     rating = models.PositiveSmallIntegerField(choices=RATING_CHOICES, blank=True, null=True)
     feedback_title = models.CharField(max_length=100, blank=True, null=True)  # ✅ Optional title
+
     comment = models.TextField(blank=True, null=True)  # ✅ Feedback text
+
     is_public = models.BooleanField(default=True)  # ✅ Admin control (show/hide)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -176,6 +189,7 @@ class Review(models.Model):
 
 
 # ✅ Recalculate cached rating on create/update/delete
+
 def _recalc_item_rating(item: MenuItem):
     agg = Review.objects.filter(item=item, rating__isnull=False).aggregate(
         avg=Avg('rating'),
@@ -201,7 +215,8 @@ class Favorite(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = ("user", "item")   # একজন ইউজার একই item দুইবার favorite করতে পারবে না
+        unique_together = ("user", "item")   # A user cannot favorite the same item twice
+
 
     def __str__(self):
         return f"{self.user.username} ❤️ {self.item.name}"
@@ -211,6 +226,7 @@ class Favorite(models.Model):
 # ---------------------------
 # Notifications
 # ---------------------------
+
 class Notification(models.Model):
     """
     Simple in-app notification + optional email.
@@ -222,7 +238,8 @@ class Notification(models.Model):
     )
     title = models.CharField(max_length=200)
     message = models.TextField()
-    link = models.CharField(max_length=255, blank=True)  # e.g. /orders/ or /dashboard/
+    link = models.CharField(max_length=255, blank=True)  # e.g. /orders/or /dashboard/
+
     is_read = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -235,6 +252,7 @@ class Notification(models.Model):
 # ---------------------------
 # Address
 # ---------------------------
+
     
 class Address(models.Model):
     user = models.ForeignKey(
@@ -261,7 +279,8 @@ class Address(models.Model):
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)
-        # যদি এটাকে default করা হয়, অন্য সব address থেকে default তুলে নাও
+        # If it is set to default, remove the default from all other addresses
+
         if self.is_default:
             Address.objects.filter(user=self.user).exclude(pk=self.pk).update(
                 is_default=False

@@ -9,6 +9,7 @@ from .models import Review, MenuItem, Payment, Address
 # ------------------------------------------------
 # 🧍 Custom Signup Form
 # ------------------------------------------------
+
 class CustomSignupForm(UserCreationForm):
     email = forms.EmailField(required=True, label="Email")
     phone = forms.CharField(max_length=15, required=False, label="Phone")
@@ -43,6 +44,7 @@ class CustomSignupForm(UserCreationForm):
                 field.widget.attrs["placeholder"] = placeholders[name]
 
         # default help_text hide
+
         self.fields["username"].help_text = ""
         self.fields["password1"].help_text = ""
         self.fields["password2"].help_text = ""
@@ -63,6 +65,7 @@ class CustomSignupForm(UserCreationForm):
 # ------------------------------------------------
 # ⭐ Review + Feedback Form (User Side)
 # ------------------------------------------------
+
 class ReviewForm(forms.ModelForm):
     """
     User feedback form — allows a logged-in user to rate and review a MenuItem.
@@ -123,6 +126,7 @@ class ReviewForm(forms.ModelForm):
 # ------------------------------------------------
 # 💳 Checkout Payment Form
 # ------------------------------------------------
+
 class CheckoutPaymentForm(forms.Form):
     PAYMENT_CHOICES = [
         ("cash", "Cash"),
@@ -137,6 +141,7 @@ class CheckoutPaymentForm(forms.Form):
     )
 
     # Mock card fields (demo)
+
     card_number = forms.CharField(
         required=False,
         label="Card Number",
@@ -155,6 +160,7 @@ class CheckoutPaymentForm(forms.Form):
         card_cvc = cleaned.get("card_cvc")
 
         # mock_card হলে card info mandatory
+
         if method == "mock_card":
             if not card_number or not card_cvc:
                 raise ValidationError(
@@ -166,6 +172,7 @@ class CheckoutPaymentForm(forms.Form):
 # ------------------------------------------------
 # 🍽 Menu Item Management Form (Admin/Vendor Side)
 # ------------------------------------------------
+
 class MenuItemForm(forms.ModelForm):
     class Meta:
         model = MenuItem
@@ -201,6 +208,7 @@ class MenuItemForm(forms.ModelForm):
 # ------------------------------------------------
 # 📮 Address Book Form
 # ------------------------------------------------
+
 class AddressForm(forms.ModelForm):
     class Meta:
         model = Address

@@ -1,4 +1,3 @@
-# my_canteen/apps.py
 from django.apps import AppConfig
 
 class MyCanteenConfig(AppConfig):
@@ -6,4 +5,4 @@ class MyCanteenConfig(AppConfig):
     name = 'my_canteen'
 
     def ready(self):
-        import my_canteen.signals  # noqa
+        import my_canteen.signals
