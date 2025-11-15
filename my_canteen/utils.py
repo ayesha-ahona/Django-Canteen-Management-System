@@ -1,4 +1,5 @@
-# my_canteen/utils.py
+# My canteen/utils.py
+
 
 from django.core.mail import send_mail
 from django.conf import settings
@@ -10,8 +11,10 @@ def send_notification(
     user,
     title,
     message,
-    category="general",  # optional, শুধু future use
-    link=None,           # optional
+    category="general",  # optional, future use only
+
+    link=None,           # Optional
+
     send_email=True,
 ):
     """
@@ -27,27 +30,32 @@ def send_notification(
     )
     """
 
-    # ---------- In-app notification ----------
+    # ----------In-app notification ----------
+
     data = {
         "user": user,
         "message": message,
     }
 
-    # model-এ title ফিল্ড থাকলে সেটাও পাঠাই
+    # If the model has a title field, send that too
+
     if hasattr(Notification, "title"):
         data["title"] = title
 
-    # model-এ category থাকলে তবেই পাঠাই
+    # Send only if there is category in model
+
     if hasattr(Notification, "category"):
         data["category"] = category
 
-    # model-এ link থাকলে তবেই পাঠাই
+    # Send only if there is a link in the model
+
     if hasattr(Notification, "link"):
         data["link"] = link
 
     Notification.objects.create(**data)
 
-    # ---------- Email (optional) ----------
+    # ----------Email (optional) ----------
+
     if send_email and getattr(user, "email", None):
         subject = title
         body = message
@@ -61,5 +69,6 @@ def send_notification(
                 fail_silently=True,
             )
         except Exception:
-            # ইমেইল fail হলেও server crash করবে না
+            # Even if the email fails, the server will not crash
+
             pass

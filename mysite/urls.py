@@ -10,16 +10,19 @@ urlpatterns = [
     path("admin/", admin.site.urls),
 
     # ===== Core =====
+
     path("", views.home, name="home"),
     path("menu/", views.menu_page, name="menu"),
 
     # ===== Item detail + feedback (rating & review) =====
+
     path("item/<int:item_id>/", views.item_detail, name="item_detail"),
     path("item/<int:item_id>/review/", views.submit_review, name="submit_review"),
     path("item/<int:item_id>/review/edit/", views.edit_review, name="edit_review"),
     path("item/<int:item_id>/review/delete/", views.delete_review, name="delete_review"),
 
     # ===== Cart + Checkout =====
+
     path("cart/", views.view_cart, name="cart"),
     path("cart/add/<int:item_id>/", views.add_to_cart, name="add_to_cart"),
     path(
@@ -34,9 +37,11 @@ urlpatterns = [
     path("checkout/", views.checkout, name="checkout"),
 
     # ===== Orders =====
+
     path("orders/", views.orders_page, name="orders"),
 
     # Order lifecycle (vendor/admin/staff)
+
     path("orders/<int:order_id>/accept/", views.order_accept, name="order_accept"),
     path(
         "orders/<int:order_id>/preparing/",
@@ -63,6 +68,7 @@ urlpatterns = [
     ),
 
     # User self-cancel
+
     path(
         "orders/<int:order_id>/user-cancel/",
         views.user_order_cancel,
@@ -70,6 +76,7 @@ urlpatterns = [
     ),
 
     # Invoice PDF
+
     path(
         "orders/<int:order_id>/invoice/",
         views.order_invoice_pdf,
@@ -77,15 +84,18 @@ urlpatterns = [
     ),
 
     # ===== Payment flow =====
+
     path("payment/start/<int:order_id>/", views.payment_start, name="payment_start"),
     path("payment/success/", views.payment_success, name="payment_success"),
     path("payment/failed/", views.payment_failed, name="payment_failed"),
 
     # Gateways: webhook/IPN
+
     path("webhook/stripe/", views.stripe_webhook, name="stripe_webhook"),
     path("ipn/sslcommerz/", views.sslcommerz_ipn, name="sslcommerz_ipn"),
 
     # Real-time status polling
+
     path(
         "orders/<int:order_id>/status/",
         views.order_status_api,
@@ -93,10 +103,12 @@ urlpatterns = [
     ),
 
     # ===== About/Contact -> home anchors =====
+
     path("about/", views.about_anchor, name="about"),
     path("contact/", views.contact_anchor, name="contact"),
 
     # ===== Auth =====
+
     path("signup/", views.signup_page, name="signup"),
     path("login/", views.CustomLoginView.as_view(), name="login"),
     path(
@@ -106,6 +118,7 @@ urlpatterns = [
     ),
 
     # Email verification
+
     path(
         "verify-email/<uidb64>/<token>/",
         views.verify_email,
@@ -118,11 +131,13 @@ urlpatterns = [
     ),
 
     # ===== Dashboard & profile =====
+
     path("dashboard/", views.dashboard, name="dashboard"),
     path("profile/", views.profile_page, name="profile"),
     path("settings/", views.settings_page, name="settings"),
 
     # Vendor Dashboard (superadmin -> vendor)
+
     path("dashboard/vendor/", views.vendor_dashboard, name="vendor_dashboard"),
     path(
         "dashboard/superadmin/",
@@ -131,6 +146,7 @@ urlpatterns = [
     ),
 
     # ===== Vendor CRUD =====
+
     path("vendor/items/", views.vendor_item_list, name="vendor_item_list"),
     path("vendor/items/new/", views.vendor_item_create, name="vendor_item_create"),
     path(
@@ -149,7 +165,8 @@ urlpatterns = [
         name="vendor_item_toggle_active",
     ),
 
-    # ===== Favorites / Wishlist =====
+    # ===== Favorites /Wishlist =====
+
     path("favorites/", views.favorites_page, name="favorites"),
     path(
         "favorite/<int:item_id>/toggle/",
@@ -158,6 +175,7 @@ urlpatterns = [
     ),
 
     # ===== Notifications =====
+
     path("notifications/", views.notifications_page, name="notifications"),
     path(
         "notifications/read/<int:pk>/",
@@ -167,6 +185,7 @@ urlpatterns = [
 
     # ===== Address Book =====
     # main manage page
+
     path("addresses/", views.address_book, name="address_book"),
     path(
         "addresses/<int:pk>/delete/",
@@ -178,20 +197,23 @@ urlpatterns = [
         views.address_set_default,
         name="address_set_default",
     ),
-    # checkout side drawer / simple list
+    # checkout side drawer /simple list
+
     path(
         "addresses/list/",
         views.address_list,
         name="address_list",
     ),
 
-    # ===== Reports (Daily Sales) - vendor/admin only =====
+    # ===== Reports (Daily Sales) -vendor/admin only =====
+
     path(
         "reports/daily-sales/",
         views.daily_sales_report,
         name="daily_sales_report",
     ),
     # ✅ Spending summary
+
     path('spending/', views.spending_summary, name='spending_summary'), 
 ]
 

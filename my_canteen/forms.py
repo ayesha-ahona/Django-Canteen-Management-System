@@ -11,6 +11,7 @@ from .models import Review, MenuItem, Payment, Address
 # ------------------------------------------------
 
 
+
 class CustomSignupForm(UserCreationForm):
     email = forms.EmailField(required=True, label="Email")
     phone = forms.CharField(max_length=15, required=False, label="Phone")
@@ -47,6 +48,7 @@ class CustomSignupForm(UserCreationForm):
         # default help_text hide
 
 
+
         self.fields["username"].help_text = ""
         self.fields["password1"].help_text = ""
         self.fields["password2"].help_text = ""
@@ -69,7 +71,9 @@ class CustomSignupForm(UserCreationForm):
 # ------------------------------------------------
 
 
-# my_canteen/forms.py
+
+# My canteen/forms.py
+
 from django import forms
 from .models import Review
 
@@ -81,17 +85,20 @@ class ReviewForm(forms.ModelForm):
     def clean_rating(self):
         rating = self.cleaned_data.get("rating")
 
-        # 1) rating absent হলে ValidationError দাও, int() কোরো না
+        # 1) Throw ValidationError if rating is absent, don't call int()
+
         if rating in (None, ""):
             raise forms.ValidationError("Please select a rating.")
 
-        # 2) string হলে int এ convert করো
+        # 2) Convert to int if string
+
         try:
             rating = int(rating)
         except (TypeError, ValueError):
             raise forms.ValidationError("Invalid rating value.")
 
         # 3) range check
+
         if not (1 <= rating <= 5):
             raise forms.ValidationError("Rating must be between 1 and 5.")
 
@@ -102,6 +109,7 @@ class ReviewForm(forms.ModelForm):
 # ------------------------------------------------
 # 💳 Checkout Payment Form
 # ------------------------------------------------
+
 
 
 class CheckoutPaymentForm(forms.Form):
@@ -118,6 +126,7 @@ class CheckoutPaymentForm(forms.Form):
     )
 
     # Mock card fields (demo)
+
 
 
     card_number = forms.CharField(
@@ -140,6 +149,7 @@ class CheckoutPaymentForm(forms.Form):
         # if it is mock_card, info is  mandatory
 
 
+
         if method == "mock_card":
             if not card_number or not card_cvc:
                 raise ValidationError(
@@ -151,6 +161,7 @@ class CheckoutPaymentForm(forms.Form):
 # ------------------------------------------------
 # 🍽 Menu Item Management Form (Admin/Vendor Side)
 # ------------------------------------------------
+
 
 
 class MenuItemForm(forms.ModelForm):
@@ -188,6 +199,7 @@ class MenuItemForm(forms.ModelForm):
 # ------------------------------------------------
 # 📮 Address Book Form
 # ------------------------------------------------
+
 
 
 class AddressForm(forms.ModelForm):

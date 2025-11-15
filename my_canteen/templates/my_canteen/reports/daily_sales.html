@@ -1,5 +1,5 @@
 {% extends "my_canteen/base.html" %}
-{% load tz %}  {# localtime filter ব্যবহার করবো #}
+{% load tz %}  {# use localtime filter#}
 {% block content %}
 
 <div style="max-width:1100px;margin:0 auto;">
@@ -79,7 +79,7 @@
             </span>
           </td>
           <td>
-            {# লোকাল টাইমজোন অনুযায়ী তারিখ + সময় দেখাই #}
+            {# Show date + time according to local timezone#}
             {{ order.created_at|localtime|date:"M d, Y · h:i A" }}
           </td>
         </tr>

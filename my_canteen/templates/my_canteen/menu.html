@@ -183,10 +183,12 @@
 {% block extra_js %}
 <script>
 (function () {
-  // আলাদা আলাদা filter-combination অনুযায়ী আলাদা key
+  // Different keys according to different filter-combinations
+
   const key = "scroll_menu_" + window.location.search;
 
-  // page load হলে আগের scroll restore করো
+  // When the page loads, restore the previous scroll
+
   window.addEventListener("load", function () {
     const saved = sessionStorage.getItem(key);
     if (saved !== null) {
@@ -197,7 +199,8 @@
     }
   });
 
-  // পেজ ছাড়ার আগেই current scroll save করো
+  // Save the current scroll before leaving the page
+
   window.addEventListener("beforeunload", function () {
     sessionStorage.setItem(key, window.scrollY);
   });

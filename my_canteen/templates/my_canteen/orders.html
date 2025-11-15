@@ -119,7 +119,7 @@
                 {% if order.status == "delivered" or order.status == "completed" %}
                   <form action="{% url 'reorder_order' order.id %}"
                         method="post"
-                        style="display:inline%;">
+                        style="display:inline;">
                     {% csrf_token %}
                     <button type="submit"
                             style="background:#ffffff;border:1px solid #c62828;color:#c62828;border-radius:10px;padding:7px 14px;cursor:pointer;font-size:.85rem;">
