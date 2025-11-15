@@ -1,4 +1,5 @@
 {% extends "my_canteen/base.html" %}
+{% load tz %}  {# localtime filter ব্যবহার করবো #}
 {% block content %}
 
 <div style="max-width:1100px;margin:0 auto;">
@@ -63,7 +64,7 @@
         <th>User</th>
         <th>Total</th>
         <th>Status</th>
-        <th>Time</th>
+        <th>Date &amp; Time</th>
       </tr>
     </thead>
     <tbody>
@@ -78,7 +79,8 @@
             </span>
           </td>
           <td>
-            {{ order.created_at|time:"h:i A" }}
+            {# লোকাল টাইমজোন অনুযায়ী তারিখ + সময় দেখাই #}
+            {{ order.created_at|localtime|date:"M d, Y · h:i A" }}
           </td>
         </tr>
       {% empty %}
@@ -104,7 +106,13 @@
     <tbody>
       {% for row in payment_summary %}
         <tr>
-          <td>{{ row.payment_method|title }}</td>
+          <td>
+            {% if row.payment_method %}
+              {{ row.payment_method|title }}
+            {% else %}
+              Unknown
+            {% endif %}
+          </td>
           <td>{{ row.count }}</td>
           <td>{{ row.amount }} Tk</td>
         </tr>
