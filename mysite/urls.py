@@ -191,6 +191,8 @@ urlpatterns = [
         views.daily_sales_report,
         name="daily_sales_report",
     ),
+    # ✅ Spending summary
+    path('spending/', views.spending_summary, name='spending_summary'), 
 ]
 
 if settings.DEBUG:
