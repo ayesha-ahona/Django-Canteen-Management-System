@@ -7,130 +7,191 @@ from django.conf.urls.static import static
 from django.shortcuts import redirect
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
+    path("admin/", admin.site.urls),
 
-    # Core
+    # ===== Core =====
+    path("", views.home, name="home"),
+    path("menu/", views.menu_page, name="menu"),
 
-    path('', views.home, name='home'),
-    path('menu/', views.menu_page, name='menu'),
+    # ===== Item detail + feedback (rating & review) =====
+    path("item/<int:item_id>/", views.item_detail, name="item_detail"),
+    path("item/<int:item_id>/review/", views.submit_review, name="submit_review"),
+    path("item/<int:item_id>/review/edit/", views.edit_review, name="edit_review"),
+    path("item/<int:item_id>/review/delete/", views.delete_review, name="delete_review"),
 
-    # ---Item detail + feedback (feedback and rating system) ---
-    # ✅ This URL displays an item's detail page (where reviews are listed).
+    # ===== Cart + Checkout =====
+    path("cart/", views.view_cart, name="cart"),
+    path("cart/add/<int:item_id>/", views.add_to_cart, name="add_to_cart"),
+    path(
+        "cart/add/<int:item_id>/<int:qty>/",
+        views.add_to_cart_qty,
+        name="add_to_cart_qty",
+    ),
+    path("cart/remove/<int:item_id>/", views.remove_from_cart, name="remove_from_cart"),
+    path("cart/inc/<int:item_id>/", views.increase_cart_qty, name="increase_cart_qty"),
+    path("cart/dec/<int:item_id>/", views.decrease_cart_qty, name="decrease_cart_qty"),
+    path("cart/update/<int:item_id>/", views.update_cart, name="update_cart"),
+    path("checkout/", views.checkout, name="checkout"),
 
-    path('item/<int:item_id>/', views.item_detail, name='item_detail'),
-    
-    # ✅ This URL is for submitting a new review (POST request).
+    # ===== Orders =====
+    path("orders/", views.orders_page, name="orders"),
 
-    path('item/<int:item_id>/review/', views.submit_review, name='submit_review'),
-    
-    # ✅ This URL displays (GET) and receives (POST) a user's own review editing page.
+    # Order lifecycle (vendor/admin/staff)
+    path("orders/<int:order_id>/accept/", views.order_accept, name="order_accept"),
+    path(
+        "orders/<int:order_id>/preparing/",
+        views.order_preparing,
+        name="order_preparing",
+    ),
+    path("orders/<int:order_id>/ready/", views.order_ready, name="order_ready"),
+    path(
+        "orders/<int:order_id>/delivered/",
+        views.order_delivered,
+        name="order_delivered",
+    ),
+    path(
+        "orders/<int:order_id>/completed/",
+        views.order_completed,
+        name="order_completed",
+    ),
+    path("orders/<int:order_id>/cancel/", views.order_cancel, name="order_cancel"),
+    path("orders/<int:order_id>/paid/", views.order_mark_paid, name="order_mark_paid"),
+    path(
+        "orders/<int:order_id>/reorder/",
+        views.reorder_order,
+        name="reorder_order",
+    ),
 
-    path('item/<int:item_id>/review/edit/', views.edit_review, name='edit_review'),
-    
-    # ✅ This URL is for deleting a user's own review (POST request).
-
-    path('item/<int:item_id>/review/delete/', views.delete_review, name='delete_review'),
-
-    # Cart + Checkout
-
-    path('cart/', views.view_cart, name='cart'),
-    path('cart/add/<int:item_id>/', views.add_to_cart, name='add_to_cart'),
-    path('cart/add/<int:item_id>/<int:qty>/', views.add_to_cart_qty, name='add_to_cart_qty'),
-    path('cart/remove/<int:item_id>/', views.remove_from_cart, name='remove_from_cart'),
-    path('cart/inc/<int:item_id>/', views.increase_cart_qty, name='increase_cart_qty'),
-    path('cart/dec/<int:item_id>/', views.decrease_cart_qty, name='decrease_cart_qty'),
-    path('cart/update/<int:item_id>/', views.update_cart, name='update_cart'),
-    path('checkout/', views.checkout, name='checkout'),
-
-    # Orders
-
-    path('orders/', views.orders_page, name='orders'),
-
-    # Order lifecycle
-
-    path('orders/<int:order_id>/accept/', views.order_accept, name='order_accept'),
-    path('orders/<int:order_id>/preparing/', views.order_preparing, name='order_preparing'),
-    path('orders/<int:order_id>/ready/', views.order_ready, name='order_ready'),
-    path('orders/<int:order_id>/delivered/', views.order_delivered, name='order_delivered'),
-    path('orders/<int:order_id>/completed/', views.order_completed, name='order_completed'),
-    path('orders/<int:order_id>/cancel/', views.order_cancel, name='order_cancel'),
-    path('orders/<int:order_id>/paid/', views.order_mark_paid, name='order_mark_paid'),
-    path("orders/<int:order_id>/reorder/", views.reorder_order, name="reorder_order"),
+    # User self-cancel
+    path(
+        "orders/<int:order_id>/user-cancel/",
+        views.user_order_cancel,
+        name="user_order_cancel",
+    ),
 
     # Invoice PDF
-
-    path('orders/<int:order_id>/invoice/', views.order_invoice_pdf, name='order_invoice_pdf'),
+    path(
+        "orders/<int:order_id>/invoice/",
+        views.order_invoice_pdf,
+        name="order_invoice_pdf",
+    ),
 
     # ===== Payment flow =====
+    path("payment/start/<int:order_id>/", views.payment_start, name="payment_start"),
+    path("payment/success/", views.payment_success, name="payment_success"),
+    path("payment/failed/", views.payment_failed, name="payment_failed"),
 
-    path('payment/start/<int:order_id>/', views.payment_start, name='payment_start'),
-    path('payment/success/', views.payment_success, name='payment_success'),
-    path('payment/failed/', views.payment_failed, name='payment_failed'),
+    # Gateways: webhook/IPN
+    path("webhook/stripe/", views.stripe_webhook, name="stripe_webhook"),
+    path("ipn/sslcommerz/", views.sslcommerz_ipn, name="sslcommerz_ipn"),
 
-    # (optional) Gateways: webhook/IPN
+    # Real-time status polling
+    path(
+        "orders/<int:order_id>/status/",
+        views.order_status_api,
+        name="order_status_api",
+    ),
 
-    path('webhook/stripe/', views.stripe_webhook, name='stripe_webhook'),
-    path('ipn/sslcommerz/', views.sslcommerz_ipn, name='sslcommerz_ipn'),
+    # ===== About/Contact -> home anchors =====
+    path("about/", views.about_anchor, name="about"),
+    path("contact/", views.contact_anchor, name="contact"),
 
-    # (optional) Real-time status polling
+    # ===== Auth =====
+    path("signup/", views.signup_page, name="signup"),
+    path("login/", views.CustomLoginView.as_view(), name="login"),
+    path(
+        "logout/",
+        auth_views.LogoutView.as_view(next_page="/login/"),
+        name="logout",
+    ),
 
-    path('orders/<int:order_id>/status/', views.order_status_api, name='order_status_api'),
+    # Email verification
+    path(
+        "verify-email/<uidb64>/<token>/",
+        views.verify_email,
+        name="verify_email",
+    ),
+    path(
+        "resend-verification/",
+        views.resend_verification,
+        name="resend_verification",
+    ),
 
-    # About/Contact -> home anchors
+    # ===== Dashboard & profile =====
+    path("dashboard/", views.dashboard, name="dashboard"),
+    path("profile/", views.profile_page, name="profile"),
+    path("settings/", views.settings_page, name="settings"),
 
-    path('about/', views.about_anchor, name='about'),
-    path('contact/', views.contact_anchor, name='contact'),
+    # Vendor Dashboard (superadmin -> vendor)
+    path("dashboard/vendor/", views.vendor_dashboard, name="vendor_dashboard"),
+    path(
+        "dashboard/superadmin/",
+        lambda r: redirect("vendor_dashboard"),
+        name="superadmin_legacy",
+    ),
 
-    # Auth
+    # ===== Vendor CRUD =====
+    path("vendor/items/", views.vendor_item_list, name="vendor_item_list"),
+    path("vendor/items/new/", views.vendor_item_create, name="vendor_item_create"),
+    path(
+        "vendor/items/<int:pk>/edit/",
+        views.vendor_item_edit,
+        name="vendor_item_edit",
+    ),
+    path(
+        "vendor/items/<int:pk>/delete/",
+        views.vendor_item_delete,
+        name="vendor_item_delete",
+    ),
+    path(
+        "vendor/items/<int:pk>/toggle/",
+        views.vendor_item_toggle_active,
+        name="vendor_item_toggle_active",
+    ),
 
-    path('signup/', views.signup_page, name='signup'),
-    path('login/', views.CustomLoginView.as_view(), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(next_page='/login/'), name='logout'),
-
-    # ✅ Email verification routes
-
-    path('verify-email/<uidb64>/<token>/', views.verify_email, name='verify_email'),
-    path('resend-verification/', views.resend_verification, name='resend_verification'),
-
-    # Dashboard & profile
-
-    path('dashboard/', views.dashboard, name='dashboard'),
-    path('profile/', views.profile_page, name='profile'),
-    path('settings/', views.settings_page, name='settings'),
-
-    # Vendor Dashboard (superadmin → vendor)
-
-    path('dashboard/vendor/', views.vendor_dashboard, name='vendor_dashboard'),
-    path('dashboard/superadmin/', lambda r: redirect('vendor_dashboard'), name='superadmin_legacy'),
-
-    # User order cancel
-
-    path('orders/<int:order_id>/user-cancel/', views.user_order_cancel, name='user_order_cancel'),
-
-    # ===== VENDOR CRUD =====
-
-    path('vendor/items/', views.vendor_item_list, name='vendor_item_list'),
-    path('vendor/items/new/', views.vendor_item_create, name='vendor_item_create'),
-    path('vendor/items/<int:pk>/edit/', views.vendor_item_edit, name='vendor_item_edit'),
-    path('vendor/items/<int:pk>/delete/', views.vendor_item_delete, name='vendor_item_delete'),
-    path('vendor/items/<int:pk>/toggle/', views.vendor_item_toggle_active, name='vendor_item_toggle_active'),
-
-    # ===== Favorites /Wishlist =====
-
-    path('favorites/', views.favorites_page, name='favorites'),
-    path('favorite/<int:item_id>/toggle/', views.toggle_favorite, name='toggle_favorite'),
+    # ===== Favorites / Wishlist =====
+    path("favorites/", views.favorites_page, name="favorites"),
+    path(
+        "favorite/<int:item_id>/toggle/",
+        views.toggle_favorite,
+        name="toggle_favorite",
+    ),
 
     # ===== Notifications =====
-
     path("notifications/", views.notifications_page, name="notifications"),
-    path("notifications/read/<int:pk>/", views.notification_mark_read, name="notification_mark_read"),
+    path(
+        "notifications/read/<int:pk>/",
+        views.notification_mark_read,
+        name="notification_mark_read",
+    ),
 
     # ===== Address Book =====
-
+    # main manage page
     path("addresses/", views.address_book, name="address_book"),
-    path("addresses/<int:pk>/delete/", views.address_delete, name="address_delete"),
-    path("addresses/<int:pk>/default/", views.address_set_default, name="address_set_default"),
-    path("addresses/", views.address_list, name="address_list"),
+    path(
+        "addresses/<int:pk>/delete/",
+        views.address_delete,
+        name="address_delete",
+    ),
+    path(
+        "addresses/<int:pk>/default/",
+        views.address_set_default,
+        name="address_set_default",
+    ),
+    # checkout side drawer / simple list
+    path(
+        "addresses/list/",
+        views.address_list,
+        name="address_list",
+    ),
+
+    # ===== Reports (Daily Sales) - vendor/admin only =====
+    path(
+        "reports/daily-sales/",
+        views.daily_sales_report,
+        name="daily_sales_report",
+    ),
 ]
+
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

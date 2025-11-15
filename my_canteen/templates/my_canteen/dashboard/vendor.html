@@ -30,14 +30,32 @@
   <a href="{% url 'settings' %}" class="surface"
      style="padding:16px;border-radius:10px;text-decoration:none;display:block;">
     <h3 style="margin:0 0 6px;">⚙ Account Settings</h3>
-    <p style="margin:0;font-size:14px;color:#666;">Update email, phone & more.</p>
+    <p style="margin:0;font-size:14px;color:#666;">Update email, phone &amp; more.</p>
+  </a>
+
+  <!-- 🆕 Daily Sales Report -->
+  <a href="{% url 'daily_sales_report' %}" class="surface"
+     style="padding:16px;border-radius:10px;text-decoration:none;display:block;">
+    <h3 style="margin:0 0 6px;">📊 Daily Sales</h3>
+    <p style="margin:0;font-size:14px;color:#666;">
+      View today’s total sales &amp; best selling items.
+    </p>
   </a>
 </div>
 
 <!-- ===== LIVE ORDERS TO PROCESS ===== -->
-<h3 id="live-orders" style="margin-bottom:8px;">👨‍🍳 Orders to Handle</h3>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;margin-top:8px;">
+  <h3 id="live-orders" style="margin:0;">👨‍🍳 Orders to Handle</h3>
+  <a href="{% url 'daily_sales_report' %}"
+     class="btn btn-soft"
+     style="font-size:13px;padding:6px 10px;white-space:nowrap;">
+    📊 Today’s Sales
+  </a>
+</div>
+
 <p class="muted" style="margin-top:0;margin-bottom:12px;font-size:13px;">
-  Use these buttons to move orders: <strong>Accept → Preparing → Ready → Delivered → Paid → Completed</strong>.
+  Use these buttons to move orders:
+  <strong>Accept → Preparing → Ready → Delivered → Paid → Completed</strong>.
 </p>
 
 <table class="orders-table pretty">
